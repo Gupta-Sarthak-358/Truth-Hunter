@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" style="visibility: hidden;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truth Hunter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            var theme = localStorage.getItem("theme") || "azure";
+            document.documentElement.setAttribute("data-theme", theme);
+            
+            var animations = localStorage.getItem("pref_animations");
+            if (animations === 'false') {
+                document.documentElement.setAttribute("data-reduce-motion", "1");
+            }
+            
+            document.documentElement.style.visibility = "visible";
+            
+            // Preload cursor images
+            ['/static/cursor/azure-normal.png', '/static/cursor/azure-click.png',
+             '/static/cursor/blossom-normal.png', '/static/cursor/blossom-click.png'].forEach(function(src) {
+                var img = new Image();
+                img.src = src;
+            });
+        })();
+    </script>
+</head>
+<body>
+    
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            {% if current_user.is_authenticated %}
+            <a href="/dashboard" class="nav-logo">⚔️ TRUTH HUNTER</a>
+            {% else %}
+            <a href="/" class="nav-logo">⚔️ TRUTH HUNTER</a>
+            {% endif %}
+            
+            <div class="nav-tabs">
+                {% if current_user.is_authenticated %}
+                <a href="/dashboard" class="nav-tab {% if request.path == '/dashboard' %}active{% endif %}">⚔️ QUEST</a>
+                <a href="/collection" class="nav-tab {% if request.path == '/collection' %}active{% endif %}">🎮 COLLECTION</a>
+                <a href="/badges" class="nav-tab {% if request.path == '/badges' %}active{% endif %}">🏅 BADGES</a>
+                {% endif %}
+            </div>
+            
+            <div class="nav-right">
+                {% if current_user.is_authenticated %}
+                <div class="nav-dropdown">
+                    <button class="nav-user-btn" onclick="toggleNavDropdown()">
+                        <span class="nav-username">{{ current_user.username }}</span>
+                        <span class="nav-dropdown-arrow">▾</span>
+                    </button>
+                    <div class="nav-dropdown-menu" id="navDropdown">
+                        <a href="/profile" class="nav-dropdown-item">👤 Profile</a>
+                        <a href="/settings" class="nav-dropdown-item">⚙️ Settings</a>
+                        <a href="/history" class="nav-dropdown-item">📊 History</a>
+                        <a href="/graphs" class="nav-dropdown-item">📈 Trends</a>
+                        <a href="/categories" class="nav-dropdown-item">📁 Categories</a>
+                        <form method="POST" action="{{ url_for('auth.logout') }}" class="nav-dropdown-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() if current_user.is_authenticated else '' }}"/>
+                            <button type="submit" class="nav-dropdown-item nav-dropdown-logout">🚪 Logout</button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <a href="/login" class="nav-tab nav-login">LOGIN</a>
+                {% endif %}
+                <button class="theme-btn" onclick="toggleTheme()" id="themeToggleBtn" title="Switch theme">🎨</button>
+            </div>
+        </div>
+    </nav>
+    
+    <script>
+    function toggleTheme() {
+        var html = document.documentElement;
+        var body = document.body;
+        var current = html.getAttribute('data-theme') || 'azure';
+        var next = current === 'azure' ? 'blossom' : 'azure';
+        
+        html.setAttribute('data-theme', next);
+        body.classList.remove('theme-azure', 'theme-blossom');
+        body.classList.add('theme-' + next);
+        localStorage.setItem('theme', next);
+        
+        updateThemeButton();
+    }
+
+    function updateThemeButton() {
+        var isBlossom = document.documentElement.getAttribute('data-theme') === 'blossom';
+        var btn = document.getElementById('themeToggleBtn');
+        if (btn) {
+            btn.textContent = isBlossom ? '🔵' : '🌸';
+            btn.title = isBlossom ? 'Switch to Azure Mode' : 'Switch to Blossom Mode';
+        }
+    }
+
+    function toggleNavDropdown() {
+        document.querySelector('.nav-dropdown').classList.toggle('open');
+    }
+    
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.nav-dropdown')) {
+            document.querySelector('.nav-dropdown')?.classList.remove('open');
+        }
+    });
+
+    document.querySelectorAll('.flash[data-auto-dismiss]').forEach(function(flash) {
+        flash.addEventListener('click', function() { flash.remove(); });
+        setTimeout(function() { flash.remove(); }, 4000);
+    });
+    </script>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}" data-auto-dismiss="true">
+                            <span class="flash-content">{{ message }}</span>
+                            <span class="flash-close" onclick="this.parentElement.remove()">×</span>
+                        </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- CAPTURE POPUP -->
+    <div class="capture-overlay" id="captureOverlay" onclick="closeCapture()">
+        <div class="capture-popup" onclick="event.stopPropagation()">
+            <div class="capture-title">CREATURE CAUGHT!</div>
+            <div class="capture-monster" id="captureMonster">🐛</div>
+            <div class="capture-name" id="captureName">Bugling</div>
+            <div class="capture-rarity" id="captureRarity">COMMON</div>
+            <div class="capture-message" id="captureMessage">One step closer.</div>
+        </div>
+    </div>
+
+    <!-- MONSTER INFO MODAL -->
+    <div class="monster-info-overlay" id="monsterInfoOverlay" onclick="closeMonsterInfo()">
+        <div class="monster-info-card" onclick="event.stopPropagation()">
+            <button class="monster-info-close" onclick="closeMonsterInfo()">×</button>
+            <div class="monster-info-emoji" id="infoEmoji">🐟</div>
+            <div class="monster-info-name" id="infoName">Aquafish</div>
+            <div class="monster-info-rarity" id="infoRarity">COMMON</div>
+            <div class="monster-info-type">
+                <span id="infoTypeIcon">💧</span>
+                <span id="infoTypeName">Tidal</span>
+            </div>
+            <div class="monster-info-flavor" id="infoFlavor">"Swims faster when you're procrastinating."</div>
+            <div class="monster-info-origin">
+                <span class="origin-label">CAUGHT FROM</span>
+                <span class="origin-task" id="infoOrigin">Unknown quest</span>
+            </div>
+            <div class="monster-info-date" id="infoDate" style="display:none;">Caught on Mar 12, 2026</div>
+            <div class="monster-info-date" id="infoVariant" style="display:none;">A rare shimmering variant</div>
+        </div>
+    </div>
+
+    <script>
+    function formatCaughtDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        if (Number.isNaN(date.getTime())) return dateStr;
+        return new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        }).format(date);
+    }
+
+    function showMonsterInfo(emoji, shinyEmoji, name, rarity, typeName, typeIcon, flavor, origin, isShiny, caughtDate, isCaught = true) {
+        const displayEmoji = isShiny === 'true' || isShiny === true ? shinyEmoji : emoji;
+        const isShinyBool = isShiny === 'true' || isShiny === true;
+        const dateEl = document.getElementById('infoDate');
+        const variantEl = document.getElementById('infoVariant');
+        const originLabel = document.querySelector('.origin-label');
+        
+        document.getElementById('infoEmoji').textContent = displayEmoji;
+        document.getElementById('infoName').textContent = isCaught ? name : '???';
+        document.getElementById('infoRarity').textContent = (isShinyBool ? '✨ SHINY ' : '') + rarity.toUpperCase();
+        document.getElementById('infoTypeIcon').textContent = typeIcon;
+        document.getElementById('infoTypeName').textContent = typeName;
+        document.getElementById('infoFlavor').textContent = isCaught
+            ? (flavor || '"A mysterious creature."')
+            : 'Classified. Its full nature is still unknown.';
+        document.getElementById('infoOrigin').textContent = isCaught
+            ? (origin ? `Caught while completing: ${origin}` : 'Caught from an unknown quest')
+            : 'Task data locked until first capture';
+        if (originLabel) {
+            originLabel.textContent = isCaught ? 'CAUGHT FROM' : 'STATUS';
+        }
+
+        if (dateEl) {
+            if (isCaught && caughtDate) {
+                dateEl.textContent = `Caught on ${formatCaughtDate(caughtDate)}`;
+                dateEl.style.display = 'block';
+            } else {
+                dateEl.style.display = 'none';
+            }
+        }
+
+        if (variantEl) {
+            if (isCaught && isShinyBool) {
+                variantEl.style.display = 'block';
+            } else {
+                variantEl.style.display = 'none';
+            }
+        }
+        
+        const card = document.querySelector('.monster-info-card');
+        card.classList.remove('legendary', 'shiny', 'rare');
+        if (isShinyBool) card.classList.add('shiny');
+        else if (rarity === 'legendary') card.classList.add('legendary');
+        else if (rarity === 'rare') card.classList.add('rare');
+        
+        document.getElementById('monsterInfoOverlay').classList.add('active');
+    }
+
+    function closeMonsterInfo() {
+        document.getElementById('monsterInfoOverlay').classList.remove('active');
+    }
+
+    function initTheme() {
+        var theme = document.documentElement.getAttribute('data-theme') || 'azure';
+        document.body.classList.add('theme-' + theme);
+        updateThemeButton();
+    }
+
+    function closeCapture() {
+        document.getElementById('captureOverlay').classList.remove('active');
+    }
+
+    // Parse Pipe-Separated Flash Messages for Monster Catches
+    document.addEventListener('DOMContentLoaded', function() {
+        initTheme();
+        
+        const flashes = document.querySelectorAll('.flash');
+        flashes.forEach(flash => {
+            const text = flash.innerText.trim();
+            
+            // Check for Monster Catch format: Icon|Name|Rarity|Message or Shiny|Icon|Name|Rarity|Message
+            if (text.includes('|') && (text.startsWith('🎉') || text.startsWith('✨'))) {
+                const parts = text.split('|', 5);
+                
+                if (parts[0] === '✨ SHINY') {
+                    // Shiny Catch: "✨ SHINY|Icon|Name|Rarity|Message"
+                    const [_, emoji, name, rarity, message] = parts;
+                    triggerCapturePopup(emoji, name, '✨ SHINY ' + rarity.toUpperCase(), message, true);
+                    flash.remove(); // Hide raw text
+                } else if (parts[0] === '🎉') {
+                    // Normal Catch: "🎉|Icon|Name|Rarity|Message"
+                    const [_, emoji, name, rarity, message] = parts;
+                    triggerCapturePopup(emoji, name, rarity.toUpperCase(), message, false);
+                    flash.remove();
+                }
+            }
+        });
+    });
+
+    function triggerCapturePopup(emoji, name, rarity, message, isShiny) {
+        document.getElementById('captureMonster').textContent = emoji;
+        document.getElementById('captureName').textContent = name;
+        document.getElementById('captureRarity').textContent = rarity;
+        document.getElementById('captureMessage').textContent = message;
+        
+        const popup = document.querySelector('.capture-popup');
+        popup.classList.remove('legendary', 'shiny', 'rare');
+        
+        if (isShiny) popup.classList.add('shiny');
+        else if (rarity.includes('LEGENDARY')) popup.classList.add('legendary');
+        else if (rarity.includes('RARE')) popup.classList.add('rare');
+        
+        document.getElementById('captureOverlay').classList.add('active');
+    }
+    </script>
+
+    <!-- MOBILE FLOATING BUTTON -->
+    {% if request.path == '/dashboard' %}
+    <button class="fab" onclick="openAddTaskModal()">+</button>
+    {% endif %}
+
+</body>
+</html>

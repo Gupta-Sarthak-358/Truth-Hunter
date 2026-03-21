@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel">
+    <h2 class="panel-title">📜 HISTORY</h2>
+
+    {% if history %}
+    
+    <!-- Pagination -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); padding: var(--space-sm) var(--space-md); background: var(--bg-elevated); border-radius: 6px;">
+        <span style="font-size: 0.7rem; color: var(--text-muted);">{{ total_days }} total days</span>
+        <div style="display: flex; gap: var(--space-sm);">
+            {% if current_page > 1 %}
+            <a href="?page={{ current_page - 1 }}" class="settings-btn" style="padding: var(--space-xs) var(--space-sm); font-size: 0.65rem;">← Prev</a>
+            {% endif %}
+            <span style="font-size: 0.7rem; color: var(--primary); padding: var(--space-xs) var(--space-sm);">Page {{ current_page }}</span>
+            {% if total_days > current_page * 20 %}
+            <a href="?page={{ current_page + 1 }}" class="settings-btn" style="padding: var(--space-xs) var(--space-sm); font-size: 0.65rem;">Next →</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="history-list">
+        {% for day in history %}
+        <div class="history-day {% if day.efficiency > 70 %}good{% elif day.efficiency > 40 %}mid{% else %}bad{% endif %}">
+            <div class="history-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <span class="history-date">{{ day.date }}</span>
+                <span class="history-efficiency">{{ day.efficiency }}% • {{ day.completed }}/{{ day.total }}</span>
+            </div>
+            <div class="history-tasks">
+                {% for task in day.tasks %}
+                <div class="history-task">
+                    <span class="status {% if task.is_completed %}done{% else %}missed{% endif %}">
+                        {% if task.is_completed %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="task-name">{{ task.name | e }}</span>
+                    <span class="task-badge">{% if task.weight == 2 %}Everyday{% else %}Today{% endif %}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-state-icon">📜</span>
+        <p class="empty-state-text">No history yet. Complete some quests!</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

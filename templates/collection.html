@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel">
+    <h2 class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+        📦 PC BOX
+        <form method="POST" action="{{ url_for('dashboard.fuse_collection') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn" style="font-size: 0.9rem;">🧬 Fuse Duplicates</button>
+        </form>
+    </h2>
+
+    <!-- Collection Stats -->
+    <div class="collection-stats">
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🎯</span>
+            <span class="collection-stat-value">{{ stats.total_tasks }}</span>
+            <span class="collection-stat-label">Caught</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🐾</span>
+            <span class="collection-stat-value">{{ stats.unique_monsters }}</span>
+            <span class="collection-stat-label">Unique</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">✨</span>
+            <span class="collection-stat-value">{{ stats.shiny_count }}</span>
+            <span class="collection-stat-label">Shinies</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🐉</span>
+            <span class="collection-stat-value">{{ stats.legendary_count }}</span>
+            <span class="collection-stat-label">Legendary</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">📘</span>
+            <span class="collection-stat-value">{{ total }} / {{ total_monsters }}</span>
+            <span class="collection-stat-label">Dex</span>
+        </div>
+    </div>
+
+    <!-- Type Filter Tabs -->
+    <div class="type-tabs">
+        <button class="type-tab active" onclick="filterByType('all', this)">ALL</button>
+        {% for t in types %}
+        <button class="type-tab" onclick="filterByType('{{ t.name }}', this)">{{ t.icon }} {{ t.name }}</button>
+        {% endfor %}
+    </div>
+
+    <!-- Monster Grid -->
+    {% if monsters %}
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.6rem; color: var(--rarity-legendary); margin-bottom: var(--space-md);">★ CAUGHT</h3>
+    <div class="monster-grid" id="monsterGrid">
+        {% for m in monsters %}
+        <div class="monster-card {% if m.is_shiny %}shiny{% endif %} {% if m.rarity == 'legendary' %}legendary{% elif m.rarity == 'rare' %}rare{% endif %}" 
+             data-type="{{ m.type_name | default('Unknown') }}"
+             data-monster-key="{{ m.monster_id }}-{{ m.caught_date if m.caught_date else 'unknown' }}"
+             onclick="showMonsterInfo('{{ m.image_emoji | safe }}', '{{ m.shiny_emoji | safe }}', '{{ m.name }}', '{{ m.rarity }}', '{{ m.type_name | default('Unknown') }}', '{{ m.type_icon | default('🐾') | safe }}', '{{ m.flavor_text | e if m.flavor_text else '' }}', '{{ m.task_name if m.task_name else 'Unknown' }}', {{ 'true' if m.is_shiny else 'false' }}, '{{ m.caught_date if m.caught_date else '' }}', true); event.stopPropagation();">
+            <span class="monster-new-badge" style="display:none;">NEW</span>
+            <span class="monster-type-badge" style="color: {{ m.type_color or 'var(--text-dim)' }};">{{ m.type_icon | default('🐾') }}</span>
+            <span class="monster-emoji">
+                {% if m.is_shiny %}{{ m.shiny_emoji }}{% else %}{{ m.image_emoji }}{% endif %}
+            </span>
+            <div class="monster-name">{{ m.name }}</div>
+            <div class="monster-rarity {{ m.rarity }}">
+                {{ m.rarity }}
+            </div>
+            <div class="monster-date">{{ m.caught_date_label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-state-icon">📦</span>
+        <p class="empty-state-text">Your PC Box is empty!</p>
+        <p style="color: var(--text-dim); font-size: 0.7rem;">Complete quests to catch creatures.</p>
+        {% if not has_migrated %}
+        <form method="POST" action="{{ url_for('migrate_existing_monsters') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn" style="margin-top: 16px;">🔄 Migrate Existing</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.6rem; color: var(--text-dim); margin-top: var(--space-xl); margin-bottom: var(--space-md);">☆ NOT CAUGHT</h3>
+    {% if uncaught_monsters %}
+    <div class="monster-grid" id="uncaughtMonsterGrid">
+        {% for m in uncaught_monsters %}
+        <div class="monster-card locked {% if m.rarity == 'legendary' %}legendary{% elif m.rarity == 'rare' %}rare{% endif %}"
+             data-type="{{ m.type_name | default('Unknown') }}"
+             onclick="showMonsterInfo('{{ m.image_emoji | safe }}', '{{ m.shiny_emoji | safe }}', '{{ m.name }}', '{{ m.rarity }}', '{{ m.type_name | default('Unknown') }}', '{{ m.type_icon | default('🐾') | safe }}', '{{ m.flavor_text | e if m.flavor_text else '' }}', 'Not caught yet', false, '', false); event.stopPropagation();">
+            <span class="monster-type-badge" style="color: {{ m.type_color or 'var(--text-dim)' }};">{{ m.type_icon | default('🐾') }}</span>
+            <span class="monster-emoji" style="filter: grayscale(1) opacity(0.35);">
+                {{ m.image_emoji }}
+            </span>
+            <div class="monster-name" style="opacity: 0.75;">???</div>
+            <div class="monster-rarity" style="opacity: 0.65;">{{ m.rarity }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding-top: 0;">
+        <span class="empty-state-icon">🏁</span>
+        <p class="empty-state-text">Dex complete for this filter.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Monster Info Modal -->
+<div class="monster-info-overlay" id="monsterInfoOverlay" onclick="closeMonsterInfo()">
+    <div class="monster-info-card" onclick="event.stopPropagation()">
+        <button class="monster-info-close" onclick="closeMonsterInfo()">×</button>
+        
+        <div class="monster-info-emoji" id="infoEmoji">🐟</div>
+        
+        <div class="monster-info-name" id="infoName">Aquafish</div>
+        
+        <div class="monster-info-rarity" id="infoRarity">COMMON</div>
+        
+        <div class="monster-info-type">
+            <span id="infoTypeIcon">💧</span>
+            <span id="infoTypeName">Tidal</span>
+        </div>
+        
+        <div class="monster-info-flavor" id="infoFlavor">
+            "Swims faster when you're procrastinating."
+        </div>
+        
+        <div class="monster-info-origin">
+            <span class="origin-label">CAUGHT FROM</span>
+            <span class="origin-task" id="infoOrigin">Study Task</span>
+        </div>
+        
+        <div class="monster-info-date" id="infoDate" style="display:none;">Caught on Mar 12, 2026</div>
+        <div class="monster-info-date" id="infoVariant" style="display:none;">A rare shimmering variant</div>
+        
+        {% if monsters %}
+        <div class="monster-info-nav">
+            {% for m in monsters %}
+            <button class="nav-dot" data-name="{{ m.name }}" data-emoji="{{ m.image_emoji }}" data-shiny="{{ m.shiny_emoji }}" data-rarity="{{ m.rarity }}" data-type="{{ m.type_name }}" data-typeicon="{{ m.type_icon }}" data-flavor="{{ m.flavor_text | e }}" data-task="{{ m.task_name | e if m.task_name else 'Unknown' }}" data-shinybool="{{ 'true' if m.is_shiny else 'false' }}" data-caughtdate="{{ m.caught_date if m.caught_date else '' }}" onclick="navigateMonster(this)"></button>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function filterByType(type, btn) {
+    // Update active tab
+    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    
+    // Filter monsters
+    const cards = document.querySelectorAll('.monster-card');
+    cards.forEach(card => {
+        if (type === 'all' || card.dataset.type === type) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function formatCaughtDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    }).format(date);
+}
+
+function showMonsterInfo(emoji, shinyEmoji, name, rarity, typeName, typeIcon, flavor, origin, isShiny, caughtDate, isCaught = true) {
+    const displayEmoji = isShiny === 'true' || isShiny === true ? shinyEmoji : emoji;
+    const isShinyBool = isShiny === 'true' || isShiny === true;
+    const originLabel = document.querySelector('.origin-label');
+    const infoCard = document.querySelector('#monsterInfoOverlay .monster-info-card');
+    
+    document.getElementById('infoEmoji').textContent = displayEmoji;
+    document.getElementById('infoName').textContent = isCaught ? name : '???';
+    document.getElementById('infoRarity').textContent = (isShinyBool ? '✨ SHINY ' : '') + rarity.toUpperCase();
+    document.getElementById('infoTypeIcon').textContent = typeIcon;
+    document.getElementById('infoTypeName').textContent = typeName;
+    document.getElementById('infoFlavor').textContent = isCaught
+        ? (flavor || '"A mysterious creature."')
+        : 'Classified. Its full nature is still unknown.';
+    document.getElementById('infoOrigin').textContent = isCaught
+        ? (origin ? `Caught while completing: ${origin}` : 'Caught from an unknown quest')
+        : 'Task data locked until first capture';
+    if (originLabel) {
+        originLabel.textContent = isCaught ? 'CAUGHT FROM' : 'STATUS';
+    }
+    const dateEl = document.getElementById('infoDate');
+    if (isCaught && caughtDate) {
+        dateEl.textContent = `Caught on ${formatCaughtDate(caughtDate)}`;
+        dateEl.style.display = 'block';
+    } else {
+        dateEl.style.display = 'none';
+    }
+    const variantEl = document.getElementById('infoVariant');
+    if (isCaught && isShinyBool) {
+        variantEl.style.display = 'block';
+    } else {
+        variantEl.style.display = 'none';
+    }
+
+    if (infoCard) {
+        infoCard.classList.remove('legendary', 'shiny', 'rare');
+        if (isShinyBool) infoCard.classList.add('shiny');
+        else if (rarity === 'legendary') infoCard.classList.add('legendary');
+        else if (rarity === 'rare') infoCard.classList.add('rare');
+    }
+    
+    document.getElementById('monsterInfoOverlay').classList.add('active');
+}
+
+function closeMonsterInfo() {
+    document.getElementById('monsterInfoOverlay').classList.remove('active');
+}
+
+function navigateMonster(btn) {
+    showMonsterInfo(
+        btn.dataset.emoji,
+        btn.dataset.shiny,
+        btn.dataset.name,
+        btn.dataset.rarity,
+        btn.dataset.type,
+        btn.dataset.typeicon,
+        btn.dataset.flavor,
+        btn.dataset.task,
+        btn.dataset.shinybool,
+        btn.dataset.caughtdate,
+        true
+    );
+}
+
+function initNewMonsterBadges() {
+    const seen = JSON.parse(localStorage.getItem('seenMonsters') || '[]');
+    document.querySelectorAll('#monsterGrid .monster-card[data-monster-key]').forEach(card => {
+        const key = card.dataset.monsterKey;
+        const badge = card.querySelector('.monster-new-badge');
+        if (badge && key && !seen.includes(key)) {
+            badge.style.display = 'inline-flex';
+        }
+    });
+}
+
+document.getElementById('monsterGrid')?.addEventListener('click', function(e) {
+    const card = e.target.closest('.monster-card[data-monster-key]');
+    if (!card) return;
+    const key = card.dataset.monsterKey;
+    if (!key) return;
+    const seen = JSON.parse(localStorage.getItem('seenMonsters') || '[]');
+    if (!seen.includes(key)) {
+        seen.push(key);
+        localStorage.setItem('seenMonsters', JSON.stringify(seen));
+    }
+    const badge = card.querySelector('.monster-new-badge');
+    if (badge) badge.style.display = 'none';
+});
+
+document.addEventListener('DOMContentLoaded', initNewMonsterBadges);
+</script>
+
+{% endblock %}

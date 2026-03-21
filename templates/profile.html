@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel">
+    <h2 class="panel-title">👤 TRAINER PROFILE</h2>
+
+    <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--space-lg); margin-bottom: var(--space-xl);">
+        <div style="padding: var(--space-lg); background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-md);">
+                <div>
+                    <div style="font-family: 'Press Start 2P'; font-size: 0.8rem; color: var(--primary); margin-bottom: var(--space-sm);">{{ current_user.username }}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">Joined {{ joined_at or 'Unknown' }}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-family: 'Press Start 2P'; font-size: 0.65rem; color: var(--accent);">LEVEL {{ stats.level }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">✨ {{ stats.xp }} XP</div>
+                </div>
+            </div>
+
+            <div style="height: 10px; background: var(--bg-surface); border-radius: 999px; overflow: hidden; margin-bottom: var(--space-sm);">
+                <div style="height: 100%; width: {{ stats.xp_progress }}%; background: linear-gradient(90deg, var(--primary), var(--accent));"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-dim);">
+                <span>Longest streak: {{ stats.longest_streak }}d</span>
+                <span>Collection: {{ collection_completion }}%</span>
+            </div>
+        </div>
+
+        <div style="padding: var(--space-lg); background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: 10px;">
+            <div style="font-family: 'Press Start 2P'; font-size: 0.55rem; color: var(--primary); margin-bottom: var(--space-md);">ACCOUNT STATUS</div>
+            <div class="stat-row"><span>🔥 Current streak</span><span class="stat-value">{{ stats.current_streak }}</span></div>
+            <div class="stat-row"><span>💯 Perfect days</span><span class="stat-value">{{ stats.perfect_days }}</span></div>
+            <div class="stat-row"><span>❄️ Freeze charges</span><span class="stat-value">{{ stats.freeze_charges }}</span></div>
+            <div class="stat-row"><span>🏅 Badges</span><span class="stat-value">{{ earned_badges|length }}</span></div>
+        </div>
+    </div>
+
+    <div class="collection-stats" style="margin-bottom: var(--space-xl);">
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🎯</span>
+            <span class="collection-stat-value">{{ stats.total_tasks }}</span>
+            <span class="collection-stat-label">Tasks</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🐾</span>
+            <span class="collection-stat-value">{{ stats.unique_monsters }}</span>
+            <span class="collection-stat-label">Unique</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">✨</span>
+            <span class="collection-stat-value">{{ stats.shiny_count }}</span>
+            <span class="collection-stat-label">Shinies</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🐉</span>
+            <span class="collection-stat-value">{{ stats.legendary_count }}</span>
+            <span class="collection-stat-label">Legendary</span>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
+        <div>
+            <h3 style="font-family: 'Press Start 2P'; font-size: 0.55rem; color: var(--primary); margin-bottom: var(--space-md);">RECENT CATCHES</h3>
+            {% if recent_catches %}
+            <div class="monster-grid">
+                {% for m in recent_catches %}
+                <div class="monster-card {% if m.is_shiny %}shiny{% endif %} {% if m.rarity == 'legendary' %}legendary{% elif m.rarity == 'rare' %}rare{% endif %}"
+                     onclick="showMonsterInfo('{{ m.image_emoji | safe }}', '{{ m.shiny_emoji | safe }}', '{{ m.name }}', '{{ m.rarity }}', '{{ m.type_name | default('Unknown') }}', '{{ m.type_icon | default('🐾') | safe }}', '{{ m.flavor_text | e if m.flavor_text else '' }}', '{{ m.task_name if m.task_name else 'Unknown' }}', {{ 'true' if m.is_shiny else 'false' }}, '{{ m.caught_date if m.caught_date else '' }}', true); event.stopPropagation();">
+                    <span class="monster-emoji">{% if m.is_shiny %}{{ m.shiny_emoji }}{% else %}{{ m.image_emoji }}{% endif %}</span>
+                    <div class="monster-name">{{ m.name }}</div>
+                    <div class="monster-rarity {% if m.is_shiny %}shiny{% endif %}">
+                        {% if m.is_shiny %}✨ {% endif %}{{ m.rarity }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span class="empty-state-icon">📦</span>
+                <p class="empty-state-text">No catches yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div>
+            <h3 style="font-family: 'Press Start 2P'; font-size: 0.55rem; color: var(--primary); margin-bottom: var(--space-md);">TYPE COMPLETION</h3>
+            <div class="badge-grid">
+                {% for row in type_progress %}
+                <div class="badge-card {% if row.caught_monsters >= row.total_monsters and row.total_monsters > 0 %}earned{% else %}locked{% endif %}">
+                    <span class="badge-icon">{{ row.icon }}</span>
+                    <div class="badge-name">{{ row.name }}</div>
+                    <div class="badge-desc">{{ row.caught_monsters }} / {{ row.total_monsters }} monsters</div>
+                    <div class="badge-progress">
+                        {% if row.total_monsters > 0 %}
+                        {{ ((row.caught_monsters / row.total_monsters) * 100)|round|int }}% complete
+                        {% else %}
+                        0% complete
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

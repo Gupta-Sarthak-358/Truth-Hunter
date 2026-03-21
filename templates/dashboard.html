@@ -1,0 +1,1225 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+/* Layout */
+.main-layout {
+    gap: var(--space-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-lg) var(--space-md);
+    align-items: start;
+}
+
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+/* Action Panel - Smaller buttons */
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    background: var(--primary);
+    color: var(--bg-deep);
+    border-color: var(--primary);
+    transform: translateX(2px);
+}
+
+.action-btn.primary {
+    background: var(--bg-elevated);
+    border-color: var(--border-default);
+    color: var(--text-main);
+}
+
+.action-btn.primary:hover {
+    background: var(--primary);
+    color: var(--bg-deep);
+    border-color: var(--primary);
+}
+
+.action-btn-icon {
+    font-size: 0.85rem;
+}
+
+/* Focus Mode */
+.focus-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-deep);
+    z-index: 2000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+}
+
+.focus-overlay.active {
+    display: flex;
+}
+
+.focus-header {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+
+.focus-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1rem;
+    color: var(--primary);
+    margin-bottom: var(--space-md);
+    text-shadow: 0 0 20px var(--primary-glow);
+}
+
+.focus-task-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin-bottom: var(--space-lg);
+}
+
+.focus-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 4rem;
+    font-weight: bold;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow);
+    margin-bottom: var(--space-xl);
+}
+
+.focus-actions {
+    display: flex;
+    gap: var(--space-lg);
+}
+
+.focus-btn {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.6rem;
+    padding: var(--space-md) var(--space-xl);
+    border: 3px solid var(--border-default);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.focus-btn.complete {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+}
+
+.focus-btn.complete:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+.focus-btn.exit {
+    background: var(--bg-elevated);
+    color: var(--text-main);
+}
+
+.focus-btn.exit:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.focus-exit-fixed {
+    position: fixed;
+    top: var(--space-lg);
+    right: var(--space-lg);
+}
+
+/* Task card improvements */
+.task-card {
+    transition: all 0.15s ease;
+    border: 2px solid transparent;
+}
+
+.task-card:hover {
+    border-color: var(--primary);
+    transform: translateX(2px);
+}
+
+.task-xp {
+    color: var(--warning);
+    font-size: 0.6rem;
+    font-weight: 600;
+    opacity: 0.8;
+    white-space: nowrap;
+}
+
+/* Momentum Panel - Tightened */
+.momentum-panel {
+    background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.momentum-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+    background-size: 200% 100%;
+    animation: shimmer 3s ease infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.momentum-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.momentum-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.5rem;
+    color: var(--primary);
+}
+
+.momentum-streak {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--warning);
+}
+
+.momentum-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.momentum-stat {
+    text-align: center;
+}
+
+.momentum-stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+.momentum-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+}
+
+.momentum-progress {
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.momentum-progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+}
+
+.momentum-progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+}
+
+/* Empty states */
+.empty-state {
+    text-align: center;
+    padding: var(--space-md);
+    opacity: 0.7;
+}
+
+.empty-state-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: var(--space-xs);
+}
+
+.empty-state-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Task section styling - Tightened */
+.task-section {
+    transition: all 0.2s ease;
+    margin-bottom: var(--space-md);
+}
+
+.task-section.everyday {
+    opacity: 0.9;
+}
+
+.task-section.today {
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.section-title {
+    font-size: 0.55rem;
+}
+
+.task-section.everyday .section-title {
+    color: var(--text-muted);
+}
+
+.task-section.today .section-title {
+    color: var(--primary);
+}
+
+.collapsible-content {
+    transition: all 0.2s ease;
+}
+
+/* Game panel - Reduced padding */
+.game-panel {
+    padding: var(--space-md);
+}
+
+/* Efficiency panel - Tightened */
+.efficiency-panel {
+    padding: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.efficiency-value {
+    font-size: 1.5rem;
+}
+
+/* Focus Modal */
+.focus-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1500;
+    align-items: center;
+    justify-content: center;
+}
+
+.focus-modal-overlay.active {
+    display: flex;
+}
+
+.focus-modal {
+    background: var(--bg-surface);
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    padding: var(--space-lg);
+    max-width: 450px;
+    width: 90%;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.focus-modal-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.6rem;
+    color: var(--primary);
+    margin-bottom: var(--space-md);
+    text-align: center;
+}
+
+.focus-task-option {
+    display: block;
+    width: 100%;
+    padding: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.focus-task-option:hover {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--bg-deep);
+}
+
+.focus-task-option .task-xp {
+    display: block;
+    margin-top: 2px;
+}
+
+.focus-modal-close {
+    display: block;
+    width: 100%;
+    margin-top: var(--space-sm);
+    padding: var(--space-xs);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.focus-modal-close:hover {
+    color: var(--text-main);
+}
+
+/* Stats panel */
+.stats-panel {
+    padding: var(--space-md);
+}
+
+.panel-header {
+    font-size: 0.5rem;
+    padding-bottom: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.stat-row {
+    padding: 6px 0;
+    font-size: 0.7rem;
+    line-height: 1.4;
+}
+
+/* XP Bar in Stats */
+.xp-bar-container {
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border-default);
+}
+
+.xp-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.xp-bar-label .level-badge {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.xp-bar {
+    height: 6px;
+    background: var(--bg-elevated);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+/* Task Search */
+.task-search {
+    margin-bottom: var(--space-md);
+}
+
+.task-search input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    padding: var(--space-sm) var(--space-md);
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+}
+
+.task-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.task-search input::placeholder {
+    color: var(--text-dim);
+}
+
+/* Recurrence select */
+select[name="recurrence"] {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    padding: var(--space-sm) var(--space-md);
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+select[name="recurrence"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Drag and Drop */
+.task-card[draggable="true"] {
+    cursor: grab;
+}
+
+.task-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.task-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+}
+
+.task-card.drag-over {
+    border-color: var(--accent);
+    box-shadow: 0 -4px 0 0 var(--accent);
+}
+</style>
+
+<div class="main-layout">
+    <!-- SIDE PANEL -->
+    <aside class="side-panel">
+        <!-- Stats -->
+        <div class="stats-panel">
+            <div class="panel-header">📊 STATS</div>
+            <a href="/history" class="stat-row clickable">
+                <span>🧾</span>
+                <span>Tasks</span>
+                <span class="stat-value">{{ stats.total_tasks }}</span>
+            </a>
+            <a href="/badges" class="stat-row clickable">
+                <span>🔥</span>
+                <span>Streak</span>
+                <span class="stat-value">{{ stats.current_streak }}</span>
+            </a>
+            <a href="/collection" class="stat-row clickable">
+                <span>🐾</span>
+                <span>Monsters</span>
+                <span class="stat-value">{{ stats.unique_monsters }}</span>
+            </a>
+            <a href="/collection" class="stat-row clickable">
+                <span>✨</span>
+                <span>Shinies</span>
+                <span class="stat-value">{{ stats.shiny_count }}</span>
+            </a>
+            <div class="xp-bar-container">
+                <div class="xp-bar-label">
+                    <span>Level {{ stats.level }}</span>
+                    <span class="level-badge">✨ {{ stats.xp }} XP</span>
+                </div>
+                <div class="xp-bar">
+                    {% set xp_thresholds = stats.xp_thresholds %}
+                    {% set current_xp = stats.xp %}
+                    {% set current_level = stats.level %}
+                    {% set next_threshold = xp_thresholds[current_level] if current_level < xp_thresholds|length else xp_thresholds[-1] %}
+                    {% set prev_threshold = xp_thresholds[current_level - 1] if current_level > 1 else 0 %}
+                    {% set progress = ((current_xp - prev_threshold) / (next_threshold - prev_threshold) * 100) if next_threshold > prev_threshold else 0 %}
+                    <div class="xp-bar-fill" style="width: {{ progress }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Panel -->
+        <div class="stats-panel">
+            <div class="panel-header">⚡ ACTIONS</div>
+            <button class="action-btn" onclick="openAddTaskModal()">
+                <span class="action-btn-icon">➕</span>
+                Add Task
+            </button>
+            <button class="action-btn" onclick="openAddEverydayModal()">
+                <span class="action-btn-icon">🔄</span>
+                Add Everyday
+            </button>
+            <button class="action-btn primary" onclick="openFocusModal()">
+                <span class="action-btn-icon">🧠</span>
+                Focus Mode
+            </button>
+            <button class="action-btn" onclick="randomTask()">
+                <span class="action-btn-icon">🎲</span>
+                Random Task
+            </button>
+        </div>
+
+        <!-- Recent Catches -->
+        {% if recent_catches %}
+        <div class="stats-panel">
+            <div class="panel-header">🎯 RECENT</div>
+            {% for m in recent_catches[:3] %}
+            <div class="stat-row recent-catch" 
+                 onclick="showMonsterInfo('{{ m.image_emoji | safe }}', '{{ m.shiny_emoji | safe }}', '{{ m.name }}', '{{ m.rarity }}', '{{ m.type_name | default('Unknown') }}', '{{ m.type_icon | default('🐾') | safe }}', '{{ m.flavor_text | e if m.flavor_text else '' }}', '{{ m.task_name if m.task_name else 'Unknown' }}', {{ 'true' if m.is_shiny else 'false' }}, '{{ m.caught_date if m.caught_date else '' }}', true)">
+                <span class="catch-icon {% if m.is_shiny %}shiny{% endif %}">
+                    {% if m.is_shiny %}✨{% elif m.rarity == 'legendary' %}🐉{% elif m.rarity == 'rare' %}⭐{% else %}🐾{% endif %}
+                </span>
+                <span class="catch-name">{{ m.name }}</span>
+                <span class="catch-emoji">{% if m.is_shiny %}{{ m.shiny_emoji }}{% else %}{{ m.image_emoji }}{% endif %}</span>
+            </div>
+            {% endfor %}
+            <a href="/collection" style="text-align: center; margin-top: 6px; font-size: 0.6rem; color: var(--primary); display: block;">→ View All</a>
+        </div>
+        {% endif %}
+    </aside>
+
+    <!-- MAIN PANEL -->
+    <main>
+        <!-- Header -->
+        <div class="game-panel" style="margin-bottom: var(--space-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+                <h1 style="margin: 0;">{{ today }}</h1>
+            </div>
+            
+            <div class="efficiency-panel">
+                <div class="efficiency-value">{{ efficiency }}%</div>
+                <div class="efficiency-label">Today's Efficiency</div>
+            </div>
+
+            <div class="flavor-text" id="dynamic-flavor" style="font-size: 0.75rem;">
+                {% if efficiency < 30 %}
+                    The system waits. You don't.
+                {% elif efficiency < 60 %}
+                    Progress is slow, but it's still progress.
+                {% elif efficiency < 100 %}
+                    Momentum is a quiet kind of power.
+                {% else %}
+                    You're dangerously competent today.
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Task Search -->
+        <div class="task-search">
+            <input type="text" id="taskSearchInput" placeholder="🔍 Search tasks..." onkeyup="filterTasks()">
+        </div>
+
+        <!-- Today Tasks (PRIMARY) -->
+        <div class="task-section game-panel today">
+            <div class="section-header" onclick="this.classList.toggle('collapsed')">
+                <div class="section-header-top">
+                    <h2 class="section-title">🎯 TODAY'S QUESTS</h2>
+                    <span class="section-hint collapsible-icon">▼</span>
+                </div>
+                <div class="section-header-collapsed">
+                    {% set today_completed = today_tasks|selectattr('is_completed')|list|length %}
+                    {% set today_total = today_tasks|length %}
+                    {% set today_remaining = today_total - today_completed %}
+                    <span class="section-summary">{{ today_completed }}/{{ today_total }} done</span>
+                    <div class="progress-mini">
+                        <div class="progress-mini-fill" style="width: {% if today_total > 0 %}{{ (today_completed / today_total * 100)|int }}{% else %}0{% endif %}%"></div>
+                    </div>
+                    <span class="section-status">{% if today_remaining == 0 %}All done. Well played.{% elif today_remaining == 1 %}1 left. Finish strong.{% elif today_remaining <= 3 %}{{ today_remaining }} remaining.{% else %}{{ today_remaining }} tasks waiting.{% endif %}</span>
+                </div>
+            </div>
+            
+            <div class="collapsible-content">
+            <div class="task-list" id="today-task-list">
+                {% for task in today_tasks %}
+                <div class="task-card task-card today {% if not task.is_completed %}clickable{% endif %} {% if task.is_completed %}completed{% endif %}" 
+                     draggable="true"
+                     data-task-id="{{ task.id }}"
+                     onclick="if(!this.closest('.task-section').querySelector('.section-header').classList.contains('collapsed') && !this.classList.contains('dragging')) document.getElementById('today-form-{{ task.id }}').submit()">
+                    <div class="task-checkbox {% if task.is_completed %}checked{% endif %}"></div>
+                    <div class="task-info">
+                        <div class="task-name">{{ task.name | e }}</div>
+                        {% if task.priority and task.priority > 0 %}
+                        <span class="task-badge {% if task.priority == 3 %}priority-high{% elif task.priority == 2 %}priority-medium{% else %}priority-low{% endif %}">
+                            {% if task.priority == 3 %}HIGH{% elif task.priority == 2 %}MED{% else %}LOW{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="task-xp">+10</span>
+                    <form method="POST" action="{{ url_for('tasks.toggle', task_id=task.id) }}" id="today-form-{{ task.id }}" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    </form>
+                    <button type="button" class="task-expand-btn" onclick="event.stopPropagation(); toggleTaskDetails(this)">⋮</button>
+                    <div class="task-details-dropdown">
+                        <form method="POST" action="{{ url_for('tasks.update', task_id=task.id) }}" class="task-details-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <select name="category_id">
+                                <option value="">No category</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if task.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="priority">
+                                <option value="0">Priority</option>
+                                <option value="1" {% if task.priority == 1 %}selected{% endif %}>Low</option>
+                                <option value="2" {% if task.priority == 2 %}selected{% endif %}>Med</option>
+                                <option value="3" {% if task.priority == 3 %}selected{% endif %}>High</option>
+                            </select>
+                            <textarea name="notes" placeholder="Add notes...">{{ task.notes or '' }}</textarea>
+                            <button type="submit" class="task-detail-save">Save</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not today_tasks %}
+            <div class="empty-state">
+                <span class="empty-state-icon">🎯</span>
+                <p class="empty-state-text">No quests today… suspicious.</p>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('tasks.add_task') }}" class="add-task-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="text" name="name" placeholder="New quest..." required>
+                <select name="category_id">
+                    <option value="">Category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="priority">
+                    <option value="0">Priority</option>
+                    <option value="1">Low</option>
+                    <option value="2">Med</option>
+                    <option value="3">High</option>
+                </select>
+                <button type="submit">+</button>
+            </form>
+            </div>
+        </div>
+
+        <!-- Momentum Panel -->
+        <div class="momentum-panel">
+            <div class="momentum-header">
+                <div class="momentum-title">🔥 CURRENT RUN</div>
+                <div class="momentum-streak">
+                    {% if stats.current_streak > 0 %}🔥 {{ stats.current_streak }}d{% else %}No streak{% endif %}
+                </div>
+            </div>
+            
+            <div class="momentum-stats">
+                <div class="momentum-stat">
+                    <div class="momentum-stat-value">{{ stats.current_streak }}</div>
+                    <div class="momentum-stat-label">Streak</div>
+                </div>
+                <div class="momentum-stat">
+                    <div class="momentum-stat-value">{{ efficiency }}%</div>
+                    <div class="momentum-stat-label">Today</div>
+                </div>
+                <div class="momentum-stat">
+                    <div class="momentum-stat-value">{{ stats.total_tasks }}</div>
+                    <div class="momentum-stat-label">Total</div>
+                </div>
+            </div>
+            
+            <div class="momentum-progress">
+                <div class="momentum-progress-fill" 
+                     style="width: {{ efficiency }}%; 
+                            background: {% if efficiency >= 80 %}var(--success){% elif efficiency >= 50 %}var(--primary){% else %}var(--warning){% endif %};">
+                </div>
+            </div>
+            <div class="momentum-progress-label">
+                <span>Progress</span>
+                <span>{% if efficiency >= 80 %}On fire! 🔥{% elif efficiency >= 50 %}Keep going{% else %}Let's go!{% endif %}</span>
+            </div>
+        </div>
+
+        <!-- Everyday Tasks (SECONDARY) -->
+        <div class="task-section game-panel everyday">
+            <div class="section-header" onclick="this.classList.toggle('collapsed')">
+                <div class="section-header-top">
+                    <h2 class="section-title">⚔️ EVERYDAY QUESTS</h2>
+                    <span class="section-hint collapsible-icon">▼</span>
+                </div>
+                <div class="section-header-collapsed">
+                    {% set everyday_active = everyday_tasks|rejectattr('is_voided')|list|length %}
+                    {% set everyday_completed = everyday_tasks|selectattr('is_completed')|list|length %}
+                    {% set everyday_total = everyday_tasks|length %}
+                    <span class="section-summary">{{ everyday_active }} habits • {{ everyday_completed }} done</span>
+                    <div class="progress-mini">
+                        <div class="progress-mini-fill everyday-fill" style="width: {% if everyday_total > 0 %}{{ (everyday_completed / everyday_total * 100)|int }}{% else %}0{% endif %}%"></div>
+                    </div>
+                    <span class="section-status">{% if everyday_completed == everyday_total and everyday_total > 0 %}All habits complete.{% elif everyday_completed == 0 and everyday_total > 0 %}Break the streak?{% else %}{{ everyday_total - everyday_completed }} left to go.{% endif %}</span>
+                </div>
+            </div>
+            
+            <div class="collapsible-content">
+            <div class="task-list" id="everyday-task-list">
+                {% for task in everyday_tasks %}
+                <div class="task-card task-card everyday {% if not task.is_completed and not task.is_voided %}clickable{% endif %} {% if task.is_voided %}ended{% elif task.is_completed %}completed{% endif %}" 
+                     draggable="true"
+                     data-task-id="{{ task.id }}"
+                     onclick="if(!this.closest('.task-section').querySelector('.section-header').classList.contains('collapsed') && !this.classList.contains('dragging')) document.getElementById('everyday-form-{{ task.id }}').submit()">
+                    <div class="task-checkbox {% if task.is_completed %}checked{% endif %}"></div>
+                    <div class="task-info">
+                        <div class="task-name">{{ task.name | e }}</div>
+                    </div>
+                    <span class="task-xp">+15</span>
+                    <form method="POST" action="{{ url_for('tasks.toggle', task_id=task.id) }}" id="everyday-form-{{ task.id }}" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    </form>
+                    <button type="button" class="task-expand-btn" onclick="event.stopPropagation(); toggleTaskDetails(this)">⋮</button>
+                    <div class="task-details-dropdown">
+                        <form method="POST" action="{{ url_for('tasks.update', task_id=task.id) }}" class="task-details-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <select name="category_id">
+                                <option value="">No category</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if task.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="priority">
+                                <option value="0">Priority</option>
+                                <option value="1" {% if task.priority == 1 %}selected{% endif %}>Low</option>
+                                <option value="2" {% if task.priority == 2 %}selected{% endif %}>Med</option>
+                                <option value="3" {% if task.priority == 3 %}selected{% endif %}>High</option>
+                            </select>
+                            <textarea name="notes" placeholder="Add notes...">{{ task.notes or '' }}</textarea>
+                            <button type="submit" class="task-detail-save">Save</button>
+                        </form>
+                        {% if not task.is_voided and task.everyday_def_id %}
+                        <form method="POST" action="{{ url_for('tasks.toggle_everyday', task_id=task.everyday_def_id or task.id) }}" id="retire-form-{{ task.everyday_def_id or task.id }}" style="margin-top: 8px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="button" class="task-retire-btn" onclick="event.stopPropagation(); openRetireConfirm('{{ task.everyday_def_id or task.id }}', '{{ task.name | e }}')">RETIRE</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not everyday_tasks %}
+            <div class="empty-state" style="padding: var(--space-sm);">
+                <span class="empty-state-icon" style="font-size: 1.25rem;">⚔️</span>
+                <p class="empty-state-text" style="font-size: 0.7rem;">Build your routine below</p>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('tasks.add_everyday') }}" class="add-task-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="text" name="name" placeholder="New everyday quest..." required>
+                <select name="category_id">
+                    <option value="">No category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="recurrence">
+                    <option value="daily">Daily</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="mwf">Mon/Wed/Fri</option>
+                    <option value="tth">Tue/Thu</option>
+                    <option value="weekly">Weekly</option>
+                </select>
+                <button type="submit">+</button>
+            </form>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Focus Mode Task Selection Modal -->
+<div class="focus-modal-overlay" id="focusModal">
+    <div class="focus-modal">
+        <div class="focus-modal-title">🧠 SELECT TASK</div>
+        <div id="focusTaskList">
+            {% for task in today_tasks if not task.is_completed %}
+            <button type="button" class="focus-task-option" data-task-id="{{ task.id }}" data-task-name="{{ task.name | e }}" onclick="startFocusModeFromButton(this)">
+                {{ task.name }}
+                <span class="task-xp">+10 XP</span>
+            </button>
+            {% endfor %}
+            {% for task in everyday_tasks if not task.is_completed %}
+            <button type="button" class="focus-task-option" data-task-id="{{ task.id }}" data-task-name="{{ task.name | e }}" onclick="startFocusModeFromButton(this)">
+                {{ task.name }}
+                <span class="task-xp">+15 XP</span>
+            </button>
+            {% endfor %}
+        </div>
+        {% if not today_tasks and not everyday_tasks %}
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">No tasks available. Add some first!</p>
+        {% endif %}
+        <button class="focus-modal-close" onclick="closeFocusModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- Retire Confirmation Modal -->
+<div class="focus-modal-overlay" id="retireConfirmModal" style="z-index: 2001;">
+    <div class="focus-modal" style="max-width: 360px; max-height: none;" onclick="event.stopPropagation()">
+        <div class="focus-modal-title" style="color: var(--danger);">⚠️ RETIRE QUEST?</div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-md); text-align: center; line-height: 1.6;">
+            <strong id="retireTaskNameDisplay" style="color: var(--text-main);"></strong><br>
+            This will void today's instance of this habit.<br>
+            <span style="color: var(--danger); font-size: 0.65rem;">This action cannot be undone.</span>
+        </p>
+        <div style="display: flex; gap: var(--space-sm);">
+            <button class="focus-modal-close" style="flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: var(--space-sm);" onclick="closeRetireConfirm()">Cancel</button>
+            <button class="task-retire-btn" style="flex: 1; padding: var(--space-sm);" id="retireConfirmBtn" onclick="confirmRetire()">RETIRE</button>
+        </div>
+    </div>
+</div>
+
+<!-- Focus Mode Full Screen -->
+<div class="focus-overlay" id="focusOverlay">
+    <button class="action-btn focus-exit-fixed" onclick="exitFocusMode()">✕ Exit</button>
+    
+    <div class="focus-header">
+        <div class="focus-title">🧠 FOCUS MODE</div>
+        <div class="focus-task-name" id="focusTaskName">Task Name</div>
+    </div>
+    
+    <div class="focus-timer" id="focusTimer">25:00</div>
+    
+    <div class="focus-actions">
+        <button class="focus-btn complete" onclick="completeFocusTask()">✓ Complete Task</button>
+    </div>
+</div>
+
+<script>
+let _retireTargetFormId = null;
+
+function openRetireConfirm(taskId, taskName) {
+    _retireTargetFormId = 'retire-form-' + taskId;
+    document.getElementById('retireTaskNameDisplay').textContent = taskName;
+    document.getElementById('retireConfirmModal').classList.add('active');
+}
+
+function closeRetireConfirm() {
+    _retireTargetFormId = null;
+    document.getElementById('retireConfirmModal').classList.remove('active');
+}
+
+function confirmRetire() {
+    if (_retireTargetFormId) {
+        const form = document.getElementById(_retireTargetFormId);
+        if (form) form.submit();
+    }
+}
+
+document.getElementById('retireConfirmModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRetireConfirm();
+});
+
+let focusTaskId = null;
+let focusTimerInterval = null;
+let focusSeconds = 25 * 60;
+
+function openFocusModal() {
+    document.getElementById('focusModal').classList.add('active');
+}
+
+function closeFocusModal() {
+    document.getElementById('focusModal').classList.remove('active');
+}
+
+function startFocusModeFromButton(btn) {
+    startFocusMode(btn.dataset.taskId, btn.dataset.taskName || 'Task');
+}
+
+function startFocusMode(taskId, taskName) {
+    closeFocusModal();
+    
+    focusTaskId = taskId;
+    document.getElementById('focusTaskName').textContent = taskName;
+    focusSeconds = 25 * 60;
+    updateTimerDisplay();
+    const timer = document.getElementById('focusTimer');
+    timer.style.color = '';
+    timer.style.animation = '';
+    
+    document.getElementById('focusOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    focusTimerInterval = setInterval(() => {
+        focusSeconds--;
+        updateTimerDisplay();
+        
+        if (focusSeconds <= 0) {
+            clearInterval(focusTimerInterval);
+            focusSeconds = 0;
+            updateTimerDisplay();
+            const timer = document.getElementById('focusTimer');
+            timer.style.color = 'var(--danger)';
+            timer.style.animation = 'pulse 0.5s ease 3';
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const mins = Math.floor(focusSeconds / 60);
+    const secs = focusSeconds % 60;
+    document.getElementById('focusTimer').textContent = 
+        `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function completeFocusTask() {
+    if (focusTaskId) {
+        clearInterval(focusTimerInterval);
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/tasks/toggle/${focusTaskId}`;
+        form.innerHTML = `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function exitFocusMode() {
+    clearInterval(focusTimerInterval);
+    document.getElementById('focusOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+    focusTaskId = null;
+    focusSeconds = 25 * 60;
+    updateTimerDisplay();
+}
+
+function randomTask() {
+    const tasks = document.querySelectorAll('.task-card.today:not(.completed), .task-card.everyday:not(.completed):not(.ended)');
+    if (tasks.length > 0) {
+        const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
+        randomTask.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        randomTask.style.animation = 'none';
+        randomTask.offsetHeight;
+        randomTask.style.animation = 'highlight 1s ease';
+    }
+}
+
+function openAddTaskModal() {
+    const input = document.querySelector('.task-section.today .add-task-form input[name="name"]');
+    if (input) {
+        input.focus();
+        document.querySelector('.task-section.today .collapsible-content').classList.add('show');
+    }
+}
+
+function openAddEverydayModal() {
+    const input = document.querySelector('.task-section.everyday .add-task-form input[name="name"]');
+    if (input) {
+        input.focus();
+        document.querySelector('.task-section.everyday .collapsible-content').classList.add('show');
+    }
+}
+
+document.getElementById('focusModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeFocusModal();
+    }
+});
+
+function toggleTaskDetails(btn) {
+    const card = btn.closest('.task-card');
+    const dropdown = card.querySelector('.task-details-dropdown');
+    const section = card.closest('.task-section');
+    const isCollapsed = section && section.querySelector('.section-header').classList.contains('collapsed');
+    
+    // Don't open dropdown if section is collapsed
+    if (isCollapsed) return;
+    
+    const isOpen = dropdown.classList.contains('open');
+    
+    // Close all dropdowns and reset all card z-indexes
+    document.querySelectorAll('.task-details-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        d.style.opacity = '0';
+        d.style.transform = 'translateY(-10px)';
+        d.closest('.task-card').style.zIndex = '';
+    });
+    
+    // If it wasn't open, open this one and elevate its card above siblings
+    if (!isOpen) {
+        card.style.zIndex = '10';
+        dropdown.classList.add('open');
+        requestAnimationFrame(() => {
+            dropdown.style.opacity = '1';
+            dropdown.style.transform = 'translateY(0)';
+        });
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.task-details-dropdown') && !e.target.closest('.task-expand-btn')) {
+        document.querySelectorAll('.task-details-dropdown.open').forEach(d => {
+            d.classList.remove('open');
+            d.style.opacity = '0';
+            d.style.transform = 'translateY(-10px)';
+            d.closest('.task-card').style.zIndex = '';
+        });
+    }
+});
+
+// Task search/filter
+function filterTasks() {
+    const query = document.getElementById('taskSearchInput').value.toLowerCase();
+    const taskCards = document.querySelectorAll('.task-card');
+    
+    taskCards.forEach(card => {
+        const taskName = card.querySelector('.task-name')?.textContent.toLowerCase() || '';
+        const taskSection = card.closest('.task-section');
+        
+        if (taskName.includes(query)) {
+            card.style.display = '';
+            if (taskSection) taskSection.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Hide empty sections
+    document.querySelectorAll('.task-section').forEach(section => {
+        const visibleCards = section.querySelectorAll('.task-card:not([style*="display: none"])');
+        const emptyState = section.querySelector('.empty-state');
+        if (visibleCards.length === 0 && !emptyState) {
+            section.style.display = 'none';
+        } else if (visibleCards.length > 0) {
+            section.style.display = '';
+        }
+    });
+}
+
+// Drag and Drop Reordering
+let draggedElement = null;
+
+function initDragAndDrop() {
+    const taskLists = document.querySelectorAll('.task-list');
+    
+    taskLists.forEach(list => {
+        const cards = list.querySelectorAll('.task-card[draggable="true"]');
+        
+        cards.forEach(card => {
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            card.addEventListener('dragover', handleDragOver);
+            card.addEventListener('dragenter', handleDragEnter);
+            card.addEventListener('dragleave', handleDragLeave);
+            card.addEventListener('drop', handleDrop);
+        });
+    });
+}
+
+function handleDragStart(e) {
+    draggedElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.task-card').forEach(card => {
+        card.classList.remove('drag-over');
+    });
+    draggedElement = null;
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    if (this !== draggedElement) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (draggedElement !== this) {
+        const taskList = this.closest('.task-list');
+        const allCards = [...taskList.querySelectorAll('.task-card[draggable="true"]')];
+        const draggedIndex = allCards.indexOf(draggedElement);
+        const droppedIndex = allCards.indexOf(this);
+        
+        if (draggedIndex < droppedIndex) {
+            taskList.insertBefore(draggedElement, this.nextSibling);
+        } else {
+            taskList.insertBefore(draggedElement, this);
+        }
+        
+        // Update order in database
+        saveTaskOrder(taskList);
+    }
+    
+    this.classList.remove('drag-over');
+    return false;
+}
+
+function saveTaskOrder(taskList) {
+    const cards = taskList.querySelectorAll('.task-card[draggable="true"]');
+    const orders = {};
+    
+    cards.forEach((card, index) => {
+        const taskId = card.getAttribute('data-task-id');
+        if (taskId) {
+            orders[taskId] = index;
+        }
+    });
+    
+    // Send to server
+    const formData = new FormData();
+    formData.append('orders', JSON.stringify(orders));
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+    
+    fetch('/tasks/reorder', {
+        method: 'POST',
+        body: formData
+    }).catch(err => {
+        console.error('Failed to save task order:', err);
+    });
+}
+
+// Initialize drag and drop when DOM is ready
+document.addEventListener('DOMContentLoaded', initDragAndDrop);
+
+</script>
+
+{% endblock %}

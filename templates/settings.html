@@ -1,0 +1,907 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.settings-container {
+    max-width: 650px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    background: var(--bg-surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+}
+
+.settings-section-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7rem;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.settings-row:first-child {
+    padding-top: 0;
+}
+
+.settings-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.settings-label strong {
+    display: block;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.settings-label small {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+}
+
+/* Editable username */
+.username-display {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.username-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--accent);
+}
+
+.username-input {
+    background: var(--bg-elevated);
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    padding: var(--space-xs) var(--space-sm);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    width: 150px;
+    transition: all 0.2s ease;
+}
+
+.username-input:focus {
+    outline: none;
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-default);
+    border-radius: 26px;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+    background: var(--bg-deep);
+}
+
+/* Buttons */
+.settings-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-default);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.settings-btn:hover {
+    color: var(--text-main);
+    border-color: var(--text-main);
+    transform: translateY(-1px);
+}
+
+.settings-btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+.settings-btn.primary {
+    background: var(--primary);
+    color: var(--bg-deep);
+    border-color: var(--primary);
+}
+
+.settings-btn.primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-2px);
+}
+
+.settings-btn.warning {
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+.settings-btn.warning:hover {
+    background: var(--warning);
+    color: var(--bg-deep);
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.4);
+}
+
+.settings-btn.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.settings-btn.danger:hover {
+    background: var(--danger);
+    color: white;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.settings-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Button states */
+.settings-btn.loading {
+    color: transparent !important;
+}
+
+.settings-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid var(--bg-deep);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Danger zone */
+.danger-zone {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.danger-zone .settings-section-title {
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.warning-text {
+    font-size: 0.7rem;
+    color: var(--warning);
+    margin-top: 4px;
+}
+
+/* Buttons row */
+.settings-actions {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+/* Feedback toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-surface);
+    border: 2px solid var(--success);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--success);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast.error {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.toast-icon {
+    font-size: 1.2rem;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal {
+    background: var(--bg-surface);
+    border: 3px solid var(--border-default);
+    border-radius: 12px;
+    padding: var(--space-xl);
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: scale(1);
+}
+
+.modal-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.65rem;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+}
+
+.modal-title.danger {
+    color: var(--danger);
+}
+
+.modal-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    margin-bottom: var(--space-lg);
+    line-height: 1.6;
+}
+
+.modal-input {
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-default);
+    border-radius: 6px;
+    padding: var(--space-sm) var(--space-md);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    width: 100%;
+    margin-bottom: var(--space-md);
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+}
+
+.btn-group {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+</style>
+
+<div class="settings-container">
+    
+    <!-- Account Section -->
+    <div class="settings-section">
+        <div class="settings-section-title">👤 ACCOUNT</div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Username</strong>
+            </div>
+            <div class="settings-actions">
+                <span class="username-value" id="usernameDisplay">{{ current_user.username }}</span>
+                <input type="text" class="username-input" id="usernameInput" value="{{ current_user.username }}" style="display: none;">
+                <button class="settings-btn" id="editUsernameBtn" onclick="startUsernameEdit()">Edit</button>
+                <button class="settings-btn primary" id="saveUsernameBtn" onclick="saveUsername()" style="display: none;">Save</button>
+                <button class="settings-btn" id="cancelUsernameBtn" onclick="cancelUsernameEdit()" style="display: none;">Cancel</button>
+            </div>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Password</strong>
+                <small>Last changed: {% if password_changed_at %}{{ password_changed_at }}{% else %}never{% endif %}</small>
+            </div>
+            <button class="settings-btn" onclick="showPasswordModal()">Change Password</button>
+        </div>
+    </div>
+    
+    <!-- Data Section -->
+    <div class="settings-section">
+        <div class="settings-section-title">💾 DATA</div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Full Backup</strong>
+                <small>Download everything: tasks, monsters, badges, stats</small>
+            </div>
+            <a href="/export_full" class="settings-btn primary" id="fullBackupBtn" onclick="showFullBackupToast(event)">📦 Backup All</a>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Restore Full Backup</strong>
+                <small>Restore from a full backup file</small>
+                <div class="warning-text">⚠️ Will merge with existing data</div>
+            </div>
+            <form method="POST" action="{{ url_for('import_full') }}" enctype="multipart/form-data" id="fullImportForm" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="confirmed" id="fullImportConfirmed" value=""/>
+                <label class="settings-btn warning" id="fullRestoreBtn">
+                    📥 Restore
+                    <input type="file" name="file" id="fullImportFile" accept=".json" style="display:none;" 
+                           onchange="handleFullImport(this)">
+                </label>
+            </form>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Copy Yesterday's Tasks</strong>
+                <small>Copy one-time tasks from yesterday to today</small>
+            </div>
+            <form method="POST" action="{{ url_for('tasks.copy_yesterday') }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="settings-btn">📋 Copy Yesterday</button>
+            </form>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Streak Freeze Charges</strong>
+                <small>Protection when you break your streak</small>
+            </div>
+            <span class="settings-btn" style="pointer-events: none;">❄️ {{ stats.freeze_charges }}</span>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Backup Collection</strong>
+                <small>Download monsters and badges only</small>
+            </div>
+            <a href="/export_collection" class="settings-btn primary" id="backupBtn" onclick="showDownloadToast(event)">📥 Download</a>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Restore Data</strong>
+                <small>Import from a backup file</small>
+                <div class="warning-text">⚠️ Merges with existing data</div>
+            </div>
+            <form method="POST" action="{{ url_for('import_collection') }}" enctype="multipart/form-data" id="importForm" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="confirmed" id="importConfirmed" value=""/>
+                <label class="settings-btn warning" id="restoreBtn">
+                    📤 Restore
+                    <input type="file" name="file" id="importFile" accept=".json" style="display:none;" 
+                           onchange="handleImport(this)">
+                </label>
+            </form>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Export Tasks</strong>
+                <small>Download as CSV for spreadsheets</small>
+            </div>
+            <a href="/export" class="settings-btn" id="exportBtn" onclick="showExportToast(event)">📊 Export</a>
+        </div>
+    </div>
+    
+    <!-- Preferences Section -->
+    <div class="settings-section">
+        <div class="settings-section-title">🎮 PREFERENCES</div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Animations</strong>
+                <small>Page transitions and effects</small>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleAnimations" onchange="savePref('animations', this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Sound Effects</strong>
+                <small>Monster capture sounds</small>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleSounds" onchange="savePref('sounds', this.checked)">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Theme</strong>
+                <small>Switch between Azure and Blossom</small>
+            </div>
+            <button class="settings-btn" onclick="toggleTheme()">🎨 Switch</button>
+        </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="settings-section danger-zone">
+        <div class="settings-section-title">⚠️ DANGER ZONE</div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Reset Progress</strong>
+                <small>Clear all tasks, monsters, and badges</small>
+            </div>
+            <button class="settings-btn danger" onclick="showResetModal()">Reset Progress</button>
+        </div>
+        
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Delete Account</strong>
+                <small>Permanently delete account and all data</small>
+            </div>
+            <button class="settings-btn danger" onclick="showDeleteModal()">Delete Account</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+    <span class="toast-icon" id="toastIcon">✓</span>
+    <span class="toast-text" id="toastText">Saved</span>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal">
+        <div class="modal-title">🔐 Change Password</div>
+        <form method="POST" action="{{ url_for('dashboard.change_password') }}" id="passwordForm" onsubmit="return validatePassword()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div style="margin-bottom: var(--space-md);">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">New Password</label>
+                <input type="password" name="new_password" id="newPassword" class="modal-input" required>
+            </div>
+            
+            <div style="margin-bottom: var(--space-md);">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Confirm New Password</label>
+                <input type="password" id="confirmPassword" class="modal-input" required>
+            </div>
+            
+            <div class="modal-buttons">
+                <button type="button" class="settings-btn" onclick="closeModal('passwordModal')">Cancel</button>
+                <button type="submit" class="settings-btn primary" id="passwordSubmitBtn">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Confirmation Modal -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal">
+        <div class="modal-title danger">⚠️ Reset Progress?</div>
+        <div class="modal-text">
+            This will permanently delete all your tasks, monsters, badges, and statistics. This action cannot be undone.
+        </div>
+        <form method="POST" action="{{ url_for('dashboard.reset_progress') }}" id="resetForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="margin-bottom: var(--space-lg);">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Type "RESET" to confirm</label>
+                <input type="text" name="confirm" id="resetConfirm" class="modal-input" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="settings-btn" onclick="closeModal('resetModal')">Cancel</button>
+                <button type="submit" class="settings-btn danger" id="resetSubmitBtn">Reset Everything</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <div class="modal-title danger">⚠️ Delete Account?</div>
+        <div class="modal-text">
+            This will permanently delete your account and ALL data. This cannot be undone.
+        </div>
+        <form method="POST" action="{{ url_for('dashboard.delete_account') }}" id="deleteForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="margin-bottom: var(--space-lg);">
+                <label style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Type "DELETE" to confirm</label>
+                <input type="text" name="confirm_delete" id="deleteConfirm" class="modal-input" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="settings-btn" onclick="closeModal('deleteModal')">Cancel</button>
+                <button type="submit" class="settings-btn danger" id="deleteSubmitBtn">Delete Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Full Import Confirmation Modal -->
+<div class="modal-overlay" id="fullImportModal">
+    <div class="modal">
+        <div class="modal-title">📦 Restore Full Backup?</div>
+        <div class="modal-text">
+            This will merge the imported data with your existing data. Tasks, monsters, and badges will be added without duplicates.
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="settings-btn" onclick="closeFullImportModal()">Cancel</button>
+            <button type="button" class="settings-btn primary" onclick="confirmFullImport()">Restore</button>
+        </div>
+    </div>
+</div>
+
+<!-- Import Confirmation Modal -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal">
+        <div class="modal-title">📤 Restore Data?</div>
+        <div class="modal-text">
+            This will merge the imported data with your existing data. Duplicate monsters and badges won't be created.
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="settings-btn" onclick="closeImportModal()">Cancel</button>
+            <button type="button" class="settings-btn primary" onclick="confirmImport()">Restore</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load preferences from localStorage
+function loadPrefs() {
+    const animations = localStorage.getItem('pref_animations');
+    const sounds = localStorage.getItem('pref_sounds');
+    document.getElementById('toggleAnimations').checked = animations !== 'false';
+    document.getElementById('toggleSounds').checked = sounds !== 'false';
+}
+
+// Save preference to localStorage
+function savePref(key, value) {
+    localStorage.setItem('pref_' + key, value);
+    showToast('Saved ✓');
+}
+
+// Toast notifications
+function showToast(message, isError = false) {
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+    const toastIcon = document.getElementById('toastIcon');
+    
+    toastText.textContent = message;
+    toastIcon.textContent = isError ? '✗' : '✓';
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2500);
+}
+
+// Username editing
+let originalUsername = '{{ current_user.username }}';
+
+function startUsernameEdit() {
+    document.getElementById('usernameDisplay').style.display = 'none';
+    document.getElementById('usernameInput').style.display = 'inline-block';
+    document.getElementById('editUsernameBtn').style.display = 'none';
+    document.getElementById('saveUsernameBtn').style.display = 'inline-block';
+    document.getElementById('cancelUsernameBtn').style.display = 'inline-block';
+    document.getElementById('usernameInput').focus();
+    document.getElementById('usernameInput').select();
+}
+
+function cancelUsernameEdit() {
+    document.getElementById('usernameDisplay').style.display = 'inline';
+    document.getElementById('usernameInput').style.display = 'none';
+    document.getElementById('usernameInput').value = originalUsername;
+    document.getElementById('editUsernameBtn').style.display = 'inline-block';
+    document.getElementById('saveUsernameBtn').style.display = 'none';
+    document.getElementById('cancelUsernameBtn').style.display = 'none';
+}
+
+function saveUsername() {
+    const newUsername = document.getElementById('usernameInput').value.trim();
+    const saveBtn = document.getElementById('saveUsernameBtn');
+    
+    if (newUsername.length < 3) {
+        showToast('Min 3 characters', true);
+        return;
+    }
+    
+    if (newUsername === originalUsername) {
+        cancelUsernameEdit();
+        return;
+    }
+    
+    saveBtn.disabled = true;
+    saveBtn.classList.add('loading');
+    
+    const formData = new FormData();
+    formData.append('csrf_token', '{{ csrf_token() }}');
+    formData.append('new_username', newUsername);
+    
+    fetch('/settings/change_username', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('loading');
+        
+        if (data.success) {
+            originalUsername = newUsername;
+            document.getElementById('usernameDisplay').textContent = newUsername;
+            cancelUsernameEdit();
+            showToast('Username updated ✓');
+        } else {
+            showToast(data.error || 'Error occurred', true);
+        }
+    })
+    .catch(err => {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('loading');
+        showToast('Error occurred', true);
+    });
+}
+
+// Modal functions
+function showModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function showPasswordModal() {
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    showModal('passwordModal');
+}
+
+function showResetModal() {
+    document.getElementById('resetConfirm').value = '';
+    showModal('resetModal');
+}
+
+function showDeleteModal() {
+    document.getElementById('deleteConfirm').value = '';
+    showModal('deleteModal');
+}
+
+function closeImportModal() {
+    document.getElementById('importModal').classList.remove('active');
+    document.getElementById('importFile').value = '';
+}
+
+// Validate password change
+function validatePassword() {
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    const submitBtn = document.getElementById('passwordSubmitBtn');
+    
+    if (newPass.length < 6) {
+        showToast('Min 6 characters', true);
+        return false;
+    }
+    
+    if (newPass !== confirmPass) {
+        showToast('Passwords do not match', true);
+        return false;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.classList.add('loading');
+    return true;
+}
+
+// Download/Export toasts
+function showDownloadToast(event) {
+    setTimeout(() => {
+        showToast('Downloaded ✓');
+    }, 500);
+}
+
+function showExportToast(event) {
+    setTimeout(() => {
+        showToast('Exported ✓');
+    }, 500);
+}
+
+
+function showFullBackupToast(event) {
+    setTimeout(() => {
+        showToast('Backup created ✓');
+    }, 500);
+}
+
+// Full Import handling
+let pendingFullImportFile = null;
+
+function handleFullImport(input) {
+    if (input.files && input.files[0]) {
+        pendingFullImportFile = input.files[0];
+        showModal('fullImportModal');
+    }
+}
+
+function closeFullImportModal() {
+    document.getElementById('fullImportModal').classList.remove('active');
+    document.getElementById('fullImportFile').value = '';
+    pendingFullImportFile = null;
+}
+
+function confirmFullImport() {
+    if (pendingFullImportFile) {
+        document.getElementById('fullImportConfirmed').value = 'true';
+        const restoreBtn = document.getElementById('fullRestoreBtn');
+        restoreBtn.disabled = true;
+        restoreBtn.classList.add('loading');
+        
+        setTimeout(() => {
+            document.getElementById('fullImportForm').submit();
+        }, 300);
+    }
+}
+
+// Import handling
+let pendingImportFile = null;
+
+function handleImport(input) {
+    if (input.files && input.files[0]) {
+        pendingImportFile = input.files[0];
+        showModal('importModal');
+    }
+}
+
+function confirmImport() {
+    if (pendingImportFile) {
+        document.getElementById('importConfirmed').value = 'true';
+        const restoreBtn = document.getElementById('restoreBtn');
+        restoreBtn.disabled = true;
+        restoreBtn.classList.add('loading');
+        
+        setTimeout(() => {
+            document.getElementById('importForm').submit();
+        }, 300);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', loadPrefs);
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+        }
+    });
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+            modal.classList.remove('active');
+        });
+    }
+});
+
+// Enter key in username input
+document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        saveUsername();
+    }
+    if (e.key === 'Escape') {
+        cancelUsernameEdit();
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+.category-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    margin-bottom: var(--space-sm);
+    border-left: 4px solid var(--primary);
+    transition: all 0.2s ease;
+}
+
+.category-card:hover {
+    transform: translateX(4px);
+    box-shadow: -4px 0 0 var(--primary);
+}
+
+.category-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.category-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.category-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.category-tasks {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: var(--space-sm);
+}
+
+.category-type-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    background: var(--bg-surface);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.category-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.category-btn {
+    padding: 4px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.category-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.category-btn.delete:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+/* Edit Modal */
+.edit-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-modal-overlay.active {
+    display: flex;
+}
+
+.edit-modal {
+    background: var(--bg-surface);
+    border: 3px solid var(--border-default);
+    border-radius: 12px;
+    padding: var(--space-xl);
+    max-width: 400px;
+    width: 90%;
+}
+
+.edit-modal-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.65rem;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+}
+
+.edit-input {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-default);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    margin-bottom: var(--space-md);
+    box-sizing: border-box;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.edit-buttons {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: flex-end;
+}
+
+.edit-btn {
+    padding: var(--space-sm) var(--space-md);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-btn.cancel {
+    background: transparent;
+    border: 2px solid var(--border-default);
+    color: var(--text-muted);
+}
+
+.edit-btn.cancel:hover {
+    border-color: var(--text-main);
+    color: var(--text-main);
+}
+
+.edit-btn.save {
+    background: var(--primary);
+    border: 2px solid var(--primary);
+    color: var(--bg-deep);
+}
+
+.edit-btn.save:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+</style>
+
+<div class="game-panel">
+    <h2 class="panel-title">📁 CATEGORIES</h2>
+    <p class="section-hint" style="margin-bottom: var(--space-lg);">Link categories to monster types for themed catches</p>
+
+    <!-- Existing Categories -->
+    <div class="category-list" style="margin-bottom: var(--space-xl);">
+        {% for cat in categories %}
+        <div class="category-card" style="border-left-color: {{ cat.color }};">
+            <div class="category-info">
+                <div class="category-color" style="background: {{ cat.color }};"></div>
+                <span class="category-name">{{ cat.name | e }}</span>
+                <span class="category-tasks">({{ cat.task_count|default(0) }} tasks)</span>
+                {% if cat.monster_type_id %}
+                    {% for t in monster_types %}
+                        {% if t.id == cat.monster_type_id %}
+                        <span class="category-type-badge">{{ t.icon }} {{ t.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                <span class="category-type-badge">🐛 Random</span>
+                {% endif %}
+            </div>
+            <div class="category-actions">
+                <button class="category-btn" onclick="openEditModal('{{ cat.id }}', '{{ cat.name | e }}', '{{ cat.color }}', '{{ cat.monster_type_id|default('') }}')">Edit</button>
+                <form method="POST" action="{{ url_for('dashboard.delete_category', cat_id=cat.id) }}" style="display:inline;" id="deleteForm{{ cat.id }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="button" class="category-btn delete" onclick="openDeleteModal('{{ cat.id }}', '{{ cat.name | e }}')">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if not categories %}
+        <div class="empty-state">
+            <span class="empty-state-icon">📁</span>
+            <p class="empty-state-text">No categories yet. Create one below.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Add Category -->
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: var(--accent-cyan); margin-bottom: var(--space-md);">+ NEW CATEGORY</h3>
+    <form method="POST" action="{{ url_for('dashboard.add_category') }}" class="add-task-form" style="flex-wrap: wrap;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="name" placeholder="Category name" required style="flex: 1; min-width: 150px;">
+        <input type="color" name="color" value="#4a90d9">
+        <select name="monster_type_id" style="flex: 1;">
+            <option value="">Random Type</option>
+            {% for t in monster_types %}
+            <option value="{{ t.id }}">{{ t.icon }} {{ t.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">ADD</button>
+    </form>
+
+    <!-- Monster Types Reference -->
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.5rem; color: var(--accent-purple); margin-top: var(--space-xl); margin-bottom: var(--space-md);">★ MONSTER TYPES</h3>
+    <div class="type-tabs">
+        {% for t in monster_types %}
+        <div class="type-tab">{{ t.icon }} {{ t.name }}</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="edit-modal-overlay" id="editModal">
+    <div class="edit-modal">
+        <div class="edit-modal-title">✏️ EDIT CATEGORY</div>
+        <form method="POST" action="{{ url_for('dashboard.edit_category_post') }}" id="editForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="cat_id" id="editCatId">
+            <input type="text" name="name" id="editName" class="edit-input" placeholder="Category name" required>
+            <input type="color" name="color" id="editColor" class="edit-input">
+            <select name="monster_type_id" id="editType" class="edit-input">
+                <option value="">Random Type</option>
+                {% for t in monster_types %}
+                <option value="{{ t.id }}">{{ t.icon }} {{ t.name }}</option>
+                {% endfor %}
+            </select>
+            <div class="edit-buttons">
+                <button type="button" class="edit-btn cancel" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="edit-btn save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Category Modal -->
+<div class="edit-modal-overlay" id="deleteModal">
+    <div class="edit-modal">
+        <div class="edit-modal-title" style="color: var(--danger);">⚠️ DELETE CATEGORY</div>
+        <p id="deleteModalText" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-main); margin-bottom: var(--space-lg);">Delete this category?</p>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); margin-bottom: var(--space-lg);">Tasks will not be deleted, only unlinked.</p>
+        <div class="edit-buttons">
+            <button type="button" class="edit-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+            <button type="button" class="edit-btn" style="background: var(--danger); border-color: var(--danger); color: white;" id="confirmDeleteBtn">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let deleteTargetId = null;
+
+function openEditModal(id, name, color, typeId) {
+    document.getElementById('editCatId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editColor').value = color;
+    document.getElementById('editType').value = typeId;
+    document.getElementById('editModal').classList.add('active');
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.remove('active');
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
+function openDeleteModal(id, name) {
+    deleteTargetId = id;
+    document.getElementById('deleteModalText').textContent = 'Delete "' + name + '"?';
+    document.getElementById('confirmDeleteBtn').onclick = function() {
+        document.getElementById('deleteForm' + deleteTargetId).submit();
+    };
+    document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+    deleteTargetId = null;
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closeDeleteModal();
+    }
+});
+</script>
+
+{% endblock %}

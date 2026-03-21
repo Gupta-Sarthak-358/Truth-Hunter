@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.auth-container {
+    min-height: calc(100vh - 250px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.auth-panel {
+    background: var(--bg-surface);
+    border: 3px solid var(--border-default);
+    border-radius: 16px;
+    padding: var(--space-xl);
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 0 30px var(--primary-glow);
+}
+
+.auth-title {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 1rem;
+    color: var(--primary);
+    text-align: center;
+    margin-bottom: var(--space-lg);
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.auth-form input {
+    background: var(--bg-elevated);
+    border: 2px solid var(--border-default);
+    border-radius: 8px;
+    padding: var(--space-md);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: var(--transition-fast);
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.auth-form input::placeholder {
+    color: var(--text-dim);
+}
+
+.auth-form .btn {
+    margin-top: var(--space-md);
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.7rem;
+    padding: var(--space-md) var(--space-lg);
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: var(--space-lg);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.auth-link a {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.auth-link a:hover {
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--glow);
+}
+
+.auth-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: var(--space-md);
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: var(--space-sm) var(--space-md);
+    color: var(--danger);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: var(--space-md);
+}
+
+.success-message {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid var(--success);
+    border-radius: 8px;
+    padding: var(--space-sm) var(--space-md);
+    color: var(--success);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: var(--space-md);
+}
+
+.password-hint {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: -8px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 56px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.password-toggle:hover {
+    color: var(--primary);
+}
+</style>
+
+<div class="auth-container">
+    <div class="auth-panel">
+        <div class="auth-icon">⚔️</div>
+        <h1 class="auth-title">SIGN UP</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'error' %}
+                    <div class="error-message">{{ message }}</div>
+                    {% elif category == 'success' %}
+                    <div class="success-message">{{ message }}</div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" class="auth-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="text" name="username" placeholder="Choose username" required minlength="3" autocomplete="username">
+            <div class="password-field">
+                <input type="password" id="signupPassword" name="password" placeholder="Choose password" required minlength="6" autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePassword('signupPassword', this)">Show</button>
+            </div>
+            <p class="password-hint">At least 6 characters</p>
+            <div class="password-field">
+                <input type="password" id="signupConfirmPassword" name="confirm" placeholder="Confirm password" required autocomplete="new-password">
+                <button type="button" class="password-toggle" onclick="togglePassword('signupConfirmPassword', this)">Show</button>
+            </div>
+            <button type="submit" class="btn">CREATE ACCOUNT</button>
+        </form>
+        
+        <p class="auth-link">
+            Already have an account? <a href="{{ url_for('auth.login') }}">Login</a>
+        </p>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+}
+</script>
+{% endblock %}

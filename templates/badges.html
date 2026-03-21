@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel">
+    <h2 class="panel-title">🏆 TROPHY CASE</h2>
+
+    <!-- XP and Level Display -->
+    <div style="margin-bottom: var(--space-xl); padding: var(--space-md); background: var(--bg-elevated); border-radius: 8px; border: 1px solid var(--border-default);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+            <span style="font-family: 'Press Start 2P'; font-size: 0.6rem; color: var(--primary);">LEVEL {{ stats.level }}</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">✨ {{ stats.xp }} XP</span>
+        </div>
+        <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden;">
+            {% set xp_thresholds = stats.xp_thresholds %}
+            {% set current_xp = stats.xp %}
+            {% set current_level = stats.level %}
+            {% set next_threshold = xp_thresholds[current_level] if current_level < xp_thresholds|length else xp_thresholds[-1] %}
+            {% set prev_threshold = xp_thresholds[current_level - 1] if current_level > 1 else 0 %}
+            {% set progress = ((current_xp - prev_threshold) / (next_threshold - prev_threshold) * 100) if next_threshold > prev_threshold else 0 %}
+            <div style="height: 100%; width: {{ progress }}%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 4px; transition: width 0.5s ease;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.55rem; color: var(--text-dim);">
+            <span>❄️ {{ stats.freeze_charges }} Freeze Charges</span>
+            <span>Next: {{ next_threshold }} XP</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="collection-stats" style="margin-bottom: var(--space-xl);">
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🎯</span>
+            <span class="collection-stat-value">{{ stats.total_tasks }}</span>
+            <span class="collection-stat-label">Tasks Done</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🔥</span>
+            <span class="collection-stat-value">{{ stats.current_streak }}</span>
+            <span class="collection-stat-label">Streak</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🏅</span>
+            <span class="collection-stat-value">{{ earned_badges|length }}</span>
+            <span class="collection-stat-label">Badges</span>
+        </div>
+        <div class="collection-stat">
+            <span class="collection-stat-icon">🐾</span>
+            <span class="collection-stat-value">{{ stats.unique_monsters }}</span>
+            <span class="collection-stat-label">Monsters</span>
+        </div>
+    </div>
+
+    <!-- Earned Badges -->
+    {% if earned_badges %}
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.6rem; color: var(--rarity-legendary); margin-bottom: var(--space-md);">★ EARNED</h3>
+    <div class="badge-grid" style="margin-bottom: var(--space-xl);">
+        {% for badge in earned_badges %}
+        <div class="badge-card earned">
+            <span class="badge-icon">{{ badge.icon_emoji }}</span>
+            <div class="badge-name">{{ badge.name }}</div>
+            <div class="badge-desc">{{ badge.description }}</div>
+            <div class="badge-date">{{ badge.earned_date }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Locked Badges -->
+    <h3 style="font-family: 'Press Start 2P'; font-size: 0.6rem; color: var(--text-dim); margin-bottom: var(--space-md);">☆ AVAILABLE</h3>
+    <div class="badge-grid">
+        {% for badge in all_badges %}
+        {% if badge.id not in earned_ids %}
+        <div class="badge-card locked">
+            <span class="badge-icon" style="filter: grayscale(1) opacity(0.4);">{{ badge.icon_emoji }}</span>
+            <div class="badge-name">{{ badge.name }}</div>
+            <div class="badge-desc">{{ badge.description }}</div>
+            <div class="badge-progress">
+                {% if badge.condition_type == 'tasks_total' %}
+                {{ stats.total_tasks }} / {{ badge.condition_value }} tasks
+                {% elif badge.condition_type == 'streak' %}
+                {{ stats.current_streak }} / {{ badge.condition_value }} day streak
+                {% elif badge.condition_type == 'perfect_days' %}
+                {{ stats.perfect_days | default(0) }} / {{ badge.condition_value }} perfect days
+                {% elif badge.condition_type == 'unique_monsters' %}
+                {{ stats.unique_monsters }} / {{ badge.condition_value }} unique monsters
+                {% elif badge.condition_type == 'shiny_caught' %}
+                {{ stats.shiny_count }} / 1 shiny catch
+                {% elif badge.condition_type == 'legendary_caught' %}
+                {{ stats.legendary_count }} / 1 legendary catch
+                {% elif badge.condition_type == 'type_complete' %}
+                {{ stats.type_complete_count | default(0) }} / {{ badge.condition_value }} type complete
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+.env
+!.env.example
+instance/
+*.db
+*.zip
+nul
+cursor/
+*.log
+.DS_Store
+*.spec
+.coverage
+coverage/

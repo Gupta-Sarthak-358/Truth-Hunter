@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel" style="text-align: center; padding: var(--space-xl);">
+    <div style="font-family: 'Press Start 2P'; font-size: 4rem; color: var(--danger); margin-bottom: var(--space-lg);">
+        {{ error_code }}
+    </div>
+    <h2 class="panel-title" style="color: var(--text-muted);">{{ message }}</h2>
+    <p style="font-size: 0.75rem; color: var(--text-dim); margin: var(--space-lg) 0;">
+        {% if error_code == 404 %}
+        That page doesn't exist, hero.
+        {% elif error_code == 403 %}
+        Access denied. You don't have permission for that.
+        {% elif error_code == 400 %}
+        Bad request. Check your input and try again.
+        {% elif error_code == 401 %}
+        You're not logged in. Head back and try again.
+        {% else %}
+        Something went wrong in the system.
+        {% endif %}
+    </p>
+    <a href="/" class="btn">⚔️ RETURN TO QUEST</a>
+</div>
+
+{% endblock %}

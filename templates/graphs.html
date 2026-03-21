@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="game-panel">
+    <h2 class="panel-title">📈 EFFICIENCY TRENDS</h2>
+
+    {% if dates %}
+    <div class="graph-container">
+        <canvas id="efficiencyChart" class="graph-canvas"></canvas>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-state-icon">📈</span>
+        <p class="empty-state-text">Not enough data yet.</p>
+        <p style="color: var(--text-dim); font-size: 0.7rem;">Complete quests to see your progress!</p>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2"></script>
+<script>
+(function() {
+    const cs = getComputedStyle(document.documentElement);
+    const primary = cs.getPropertyValue('--primary').trim() || '#38BDF8';
+    const primaryAlpha = primary + '1a';
+    const accent = cs.getPropertyValue('--accent').trim() || '#6366F1';
+    const accentAlpha = accent + '1a';
+    const textMuted = cs.getPropertyValue('--text-muted').trim() || '#94A3B8';
+    const border = cs.getPropertyValue('--border-default').trim() || '#475569';
+    const textMain = cs.getPropertyValue('--text-main').trim() || '#E2E8F0';
+    const bgDeep = cs.getPropertyValue('--bg-deep').trim() || '#0B1220';
+
+    const labels = JSON.parse('{{ dates | tojson | safe }}');
+    const efficiencyData = JSON.parse('{{ efficiencies | tojson | safe }}');
+    const rollingData = JSON.parse('{{ rolling | tojson | safe }}');
+
+    const chartEl = document.getElementById('efficiencyChart');
+    if (!chartEl) return;
+
+    new Chart(chartEl, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Daily Efficiency',
+                    data: efficiencyData,
+                    borderColor: primary,
+                    backgroundColor: primaryAlpha,
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointBackgroundColor: primary,
+                    pointBorderColor: bgDeep,
+                    pointBorderWidth: 2
+                },
+                {
+                    label: '7-Day Average',
+                    data: rollingData,
+                    borderColor: accent,
+                    backgroundColor: accentAlpha,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.3,
+                    pointBackgroundColor: accent,
+                    pointBorderColor: bgDeep,
+                    pointBorderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        callback: value => value + '%',
+                        color: textMuted
+                    },
+                    grid: {
+                        color: border + '4D'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textMuted,
+                        maxRotation: 45
+                    },
+                    grid: {
+                        color: border + '4D'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textMain,
+                        font: {
+                            family: "'JetBrains Mono', monospace"
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+
+{% endblock %}
