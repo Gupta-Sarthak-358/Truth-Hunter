@@ -25,6 +25,7 @@ from .gamification_service import (
     prewarm_user_cache_async,
     refresh_user_cache_async,
     run_daily_sync_if_needed,
+    run_daily_sync_if_needed_async,
     reset_user_progress,
 )
 
@@ -52,5 +53,6 @@ __all__ = [
     "prewarm_user_cache_async",
     "refresh_user_cache_async",
     "run_daily_sync_if_needed",
+    "run_daily_sync_if_needed_async",
     "reset_user_progress",
 ]

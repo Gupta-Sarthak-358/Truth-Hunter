@@ -7,7 +7,7 @@ from services import (
     record_failed_login,
     check_login_locked,
     refresh_user_cache_async,
-    run_daily_sync_if_needed,
+    run_daily_sync_if_needed_async,
 )
 
 auth_bp = Blueprint("auth", __name__)
@@ -68,13 +68,9 @@ def login():
 
         if user:
             login_user(user)
-            _, daily_xp, daily_level = run_daily_sync_if_needed(user.id)
+            # Don't block login on daily sync; run it in the background.
+            run_daily_sync_if_needed_async(user.id)
             refresh_user_cache_async(user.id)
-            if daily_xp > 0:
-                msg = f"Daily Reward! You earned {daily_xp} XP!"
-                if daily_level > 0:
-                    msg += f" And reached Level {daily_level}!"
-                flash(msg, "success")
             return redirect(url_for("dashboard.dashboard"))
         else:
             record_failed_login(ip_address, username)

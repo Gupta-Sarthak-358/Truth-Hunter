@@ -23,6 +23,7 @@ from services import (
     delete_user_account,
     change_user_password,
     refresh_user_cache_async,
+    run_daily_sync_if_needed_async,
 )
 from utils import (
     utc_today,
@@ -67,6 +68,8 @@ def _log_step(step_name, fn):
 @login_required
 def dashboard():
     user_id = current_user.id
+    # Kick off daily sync in the background (idempotent).
+    run_daily_sync_if_needed_async(user_id)
     # Render the dashboard shell immediately; heavy sections are lazy-loaded.
     return render_template("dashboard.html")
 

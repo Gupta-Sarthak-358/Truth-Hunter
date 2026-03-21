@@ -30,63 +30,81 @@ COLLECTION_TTL = 30
 BADGES_TTL = 30
 SHARED_MONSTER_TYPES_TTL = 60
 
+# In-process "singleflight" to avoid spawning duplicate background jobs per-user.
+# Note: this doesn't coordinate across multiple web instances. That's acceptable for now.
+_daily_sync_inflight = set()
+_daily_sync_lock = threading.Lock()
+
+
+def _prewarm_user_cache_phase1(user_id):
+    """Warm only what's needed for the first meaningful paint (dashboard fragments)."""
+    today = format_date_iso(utc_today())
+
+    get_cached(
+        f"user:{user_id}:dashboard:day_data:{today}",
+        lambda: get_dashboard_day_data(user_id, utc_today()),
+        ttl=DASHBOARD_DAY_DATA_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:shared:categories",
+        lambda: get_dashboard_categories(user_id),
+        ttl=DASHBOARD_CATEGORIES_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:dashboard:recent_catches",
+        lambda: get_recent_monsters(user_id, limit=3),
+        ttl=DASHBOARD_RECENT_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:shared:stats",
+        lambda: get_user_stats_for_display(user_id),
+        ttl=STATS_TTL,
+    )
+
+
+def _prewarm_user_cache_phase2(user_id):
+    """Warm heavier, non-critical pages after the app is already responsive."""
+    get_cached(
+        f"user:{user_id}:collection:caught:type:None:page:1",
+        lambda: get_user_monsters(user_id, None, 1),
+        ttl=COLLECTION_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:collection:uncaught:type:None",
+        lambda: get_uncaught_monsters(user_id, None),
+        ttl=COLLECTION_TTL,
+    )
+    get_cached(
+        "shared:monster_types",
+        get_monster_types,
+        ttl=SHARED_MONSTER_TYPES_TTL,
+    )
+    _get_monster_catalog()
+    get_cached(
+        f"user:{user_id}:category_type_map",
+        lambda: _load_category_type_map(user_id),
+        ttl=DASHBOARD_CATEGORIES_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:badges:earned",
+        lambda: get_user_badges(user_id),
+        ttl=BADGES_TTL,
+    )
+    get_cached(
+        f"user:{user_id}:profile:recent_catches",
+        lambda: get_recent_monsters(user_id, limit=6),
+        ttl=DASHBOARD_RECENT_TTL,
+    )
+
 
 def _prewarm_user_cache(user_id):
     start = time.time()
-    today = format_date_iso(utc_today())
-
     try:
-        get_cached(
-            f"user:{user_id}:dashboard:day_data:{today}",
-            lambda: get_dashboard_day_data(user_id, utc_today()),
-            ttl=DASHBOARD_DAY_DATA_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:shared:categories",
-            lambda: get_dashboard_categories(user_id),
-            ttl=DASHBOARD_CATEGORIES_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:dashboard:recent_catches",
-            lambda: get_recent_monsters(user_id, limit=3),
-            ttl=DASHBOARD_RECENT_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:shared:stats",
-            lambda: get_user_stats_for_display(user_id),
-            ttl=STATS_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:collection:caught:type:None:page:1",
-            lambda: get_user_monsters(user_id, None, 1),
-            ttl=COLLECTION_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:collection:uncaught:type:None",
-            lambda: get_uncaught_monsters(user_id, None),
-            ttl=COLLECTION_TTL,
-        )
-        get_cached(
-            "shared:monster_types",
-            get_monster_types,
-            ttl=SHARED_MONSTER_TYPES_TTL,
-        )
-        _get_monster_catalog()
-        get_cached(
-            f"user:{user_id}:category_type_map",
-            lambda: _load_category_type_map(user_id),
-            ttl=DASHBOARD_CATEGORIES_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:badges:earned",
-            lambda: get_user_badges(user_id),
-            ttl=BADGES_TTL,
-        )
-        get_cached(
-            f"user:{user_id}:profile:recent_catches",
-            lambda: get_recent_monsters(user_id, limit=6),
-            ttl=DASHBOARD_RECENT_TTL,
-        )
+        _prewarm_user_cache_phase1(user_id)
+        # Yield to interactive requests; then warm the rest.
+        time.sleep(0.1)
+        _prewarm_user_cache_phase2(user_id)
+
         logger.info(
             "User cache prewarmed",
             extra={
@@ -194,6 +212,37 @@ def run_daily_sync_if_needed(user_id):
     )
 
     return True, daily_xp, daily_level
+
+
+def run_daily_sync_if_needed_async(user_id):
+    """
+    Fire-and-forget daily sync so requests don't block on cold-start work.
+    If a sync runs, we also invalidate user caches so the next fragment fetch is correct.
+    """
+
+    with _daily_sync_lock:
+        if user_id in _daily_sync_inflight:
+            return
+        _daily_sync_inflight.add(user_id)
+
+    def _worker():
+        try:
+            from utils import invalidate_user_cache
+
+            synced, _, _ = run_daily_sync_if_needed(user_id)
+            if synced:
+                invalidate_user_cache(user_id)
+        except Exception:
+            logger.exception("Daily sync async failed", extra={"user_id": user_id})
+        finally:
+            with _daily_sync_lock:
+                _daily_sync_inflight.discard(user_id)
+
+    threading.Thread(
+        target=_worker,
+        daemon=True,
+        name=f"daily-sync-{user_id}",
+    ).start()
 
 
 def get_user_stats_for_display(user_id):

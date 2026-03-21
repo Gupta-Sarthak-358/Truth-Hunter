@@ -240,6 +240,10 @@ def get_everyday_tasks(user_id):
 
 def get_dashboard_day_data(user_id, for_date=None):
     target_date = format_date_iso(for_date or utc_today())
+    # Make sure today's recurring tasks are materialized so the dashboard is correct
+    # even if a daily sync hasn't run yet.
+    if target_date == format_date_iso(utc_today()):
+        ensure_today_tasks(user_id)
 
     with get_cursor() as cur:
         cur.execute(

@@ -93,14 +93,8 @@ def add_security_headers(response):
 def refresh_session():
     if current_user.is_authenticated:
         from flask import session
-        from utils import invalidate_user_cache
-        from services import run_daily_sync_if_needed
 
         session.permanent = True
-        if request.endpoint not in {"static", "auth.logout"}:
-            synced, _, _ = run_daily_sync_if_needed(current_user.id)
-            if synced:
-                invalidate_user_cache(current_user.id)
     g.start_time = time.time()
 
 
