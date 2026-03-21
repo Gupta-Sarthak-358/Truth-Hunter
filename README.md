@@ -70,7 +70,7 @@ pip install -r requirements.txt
 - Start command:
 
 ```bash
-gunicorn app:app --workers 2 --timeout 120 --log-level info
+gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --log-level info
 ```
 
 Recommended Render setup:
