@@ -67,8 +67,48 @@ def _log_step(step_name, fn):
 @login_required
 def dashboard():
     user_id = current_user.id
+    # Render the dashboard shell immediately; heavy sections are lazy-loaded.
+    return render_template("dashboard.html")
 
+
+@dashboard_bp.route("/dashboard/fragment/side_stats")
+@login_required
+def dashboard_fragment_side_stats():
+    user_id = current_user.id
+    stats = _log_step(
+        "stats",
+        lambda: get_cached_with_status(
+            f"user:{user_id}:shared:stats",
+            lambda: get_user_stats_for_display(user_id),
+            ttl=STATS_TTL,
+        ),
+    )
+    return render_template("fragments/dashboard_side_stats.html", stats=stats)
+
+
+@dashboard_bp.route("/dashboard/fragment/side_recent")
+@login_required
+def dashboard_fragment_side_recent():
+    user_id = current_user.id
+    recent_catches = _log_step(
+        "recent_catches",
+        lambda: get_cached_with_status(
+            f"user:{user_id}:dashboard:recent_catches",
+            lambda: get_recent_monsters(user_id, limit=3),
+            ttl=RECENT_MONSTERS_TTL,
+        ),
+    )
+    return render_template(
+        "fragments/dashboard_side_recent.html", recent_catches=recent_catches
+    )
+
+
+@dashboard_bp.route("/dashboard/fragment/main")
+@login_required
+def dashboard_fragment_main():
+    user_id = current_user.id
     today = format_date_iso(utc_today())
+
     day_data = _log_step(
         "day_data",
         lambda: get_cached_with_status(
@@ -85,14 +125,6 @@ def dashboard():
             ttl=CATEGORIES_TTL,
         ),
     )
-    recent_catches = _log_step(
-        "recent_catches",
-        lambda: get_cached_with_status(
-            f"user:{user_id}:dashboard:recent_catches",
-            lambda: get_recent_monsters(user_id, limit=3),
-            ttl=RECENT_MONSTERS_TTL,
-        ),
-    )
     stats = _log_step(
         "stats",
         lambda: get_cached_with_status(
@@ -103,14 +135,31 @@ def dashboard():
     )
 
     return render_template(
-        "dashboard.html",
-        everyday_tasks=day_data["everyday_tasks"],
-        today_tasks=day_data["today_tasks"],
+        "fragments/dashboard_main.html",
         today=today,
         efficiency=day_data["efficiency"],
+        today_tasks=day_data["today_tasks"],
+        everyday_tasks=day_data["everyday_tasks"],
         categories=categories,
-        recent_catches=recent_catches,
         stats=stats,
+    )
+
+
+@dashboard_bp.route("/dashboard/fragment/modals")
+@login_required
+def dashboard_fragment_modals():
+    user_id = current_user.id
+    today = format_date_iso(utc_today())
+    day_data = get_cached(
+        f"user:{user_id}:dashboard:day_data:{today}",
+        lambda: get_dashboard_day_data(user_id, utc_today()),
+        ttl=max(DASHBOARD_EVERYDAY_TTL, DASHBOARD_TODAY_TTL, DASHBOARD_EFFICIENCY_TTL),
+    )
+
+    return render_template(
+        "fragments/dashboard_modals.html",
+        today_tasks=day_data["today_tasks"],
+        everyday_tasks=day_data["everyday_tasks"],
     )
 
 

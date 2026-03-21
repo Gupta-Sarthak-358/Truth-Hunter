@@ -1,0 +1,39 @@
+<div class="stats-panel">
+    <div class="panel-header">📊 STATS</div>
+    <a href="/history" class="stat-row clickable">
+        <span>🧾</span>
+        <span>Tasks</span>
+        <span class="stat-value">{{ stats.total_tasks }}</span>
+    </a>
+    <a href="/badges" class="stat-row clickable">
+        <span>🔥</span>
+        <span>Streak</span>
+        <span class="stat-value">{{ stats.current_streak }}</span>
+    </a>
+    <a href="/collection" class="stat-row clickable">
+        <span>🐾</span>
+        <span>Monsters</span>
+        <span class="stat-value">{{ stats.unique_monsters }}</span>
+    </a>
+    <a href="/collection" class="stat-row clickable">
+        <span>✨</span>
+        <span>Shinies</span>
+        <span class="stat-value">{{ stats.shiny_count }}</span>
+    </a>
+    <div class="xp-bar-container">
+        <div class="xp-bar-label">
+            <span>Level {{ stats.level }}</span>
+            <span class="level-badge">✨ {{ stats.xp }} XP</span>
+        </div>
+        <div class="xp-bar">
+            {% set xp_thresholds = stats.xp_thresholds %}
+            {% set current_xp = stats.xp %}
+            {% set current_level = stats.level %}
+            {% set next_threshold = xp_thresholds[current_level] if current_level < xp_thresholds|length else xp_thresholds[-1] %}
+            {% set prev_threshold = xp_thresholds[current_level - 1] if current_level > 1 else 0 %}
+            {% set progress = ((current_xp - prev_threshold) / (next_threshold - prev_threshold) * 100) if next_threshold > prev_threshold else 0 %}
+            <div class="xp-bar-fill" style="width: {{ progress }}%"></div>
+        </div>
+    </div>
+</div>
+

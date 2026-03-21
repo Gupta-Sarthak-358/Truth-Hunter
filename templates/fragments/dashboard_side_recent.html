@@ -1,0 +1,17 @@
+{% if recent_catches %}
+<div class="stats-panel">
+    <div class="panel-header">🎯 RECENT</div>
+    {% for m in recent_catches[:3] %}
+    <div class="stat-row recent-catch"
+         onclick="showMonsterInfo('{{ m.image_emoji | safe }}', '{{ m.shiny_emoji | safe }}', '{{ m.name }}', '{{ m.rarity }}', '{{ m.type_name | default('Unknown') }}', '{{ m.type_icon | default('🐾') | safe }}', '{{ m.flavor_text | e if m.flavor_text else '' }}', '{{ m.task_name if m.task_name else 'Unknown' }}', {{ 'true' if m.is_shiny else 'false' }}, '{{ m.caught_date if m.caught_date else '' }}', true)">
+        <span class="catch-icon {% if m.is_shiny %}shiny{% endif %}">
+            {% if m.is_shiny %}✨{% elif m.rarity == 'legendary' %}🐉{% elif m.rarity == 'rare' %}⭐{% else %}🐾{% endif %}
+        </span>
+        <span class="catch-name">{{ m.name }}</span>
+        <span class="catch-emoji">{% if m.is_shiny %}{{ m.shiny_emoji }}{% else %}{{ m.image_emoji }}{% endif %}</span>
+    </div>
+    {% endfor %}
+    <a href="/collection" style="text-align: center; margin-top: 6px; font-size: 0.6rem; color: var(--primary); display: block;">→ View All</a>
+</div>
+{% endif %}
+

@@ -1,0 +1,57 @@
+<!-- Focus Mode Task Selection Modal -->
+<div class="focus-modal-overlay" id="focusModal">
+    <div class="focus-modal">
+        <div class="focus-modal-title">🧠 SELECT TASK</div>
+        <div id="focusTaskList">
+            {% for task in today_tasks if not task.is_completed %}
+            <button type="button" class="focus-task-option" data-task-id="{{ task.id }}" data-task-name="{{ task.name | e }}" onclick="startFocusModeFromButton(this)">
+                {{ task.name }}
+                <span class="task-xp">+10 XP</span>
+            </button>
+            {% endfor %}
+            {% for task in everyday_tasks if not task.is_completed %}
+            <button type="button" class="focus-task-option" data-task-id="{{ task.id }}" data-task-name="{{ task.name | e }}" onclick="startFocusModeFromButton(this)">
+                {{ task.name }}
+                <span class="task-xp">+15 XP</span>
+            </button>
+            {% endfor %}
+        </div>
+        {% if not today_tasks and not everyday_tasks %}
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">No tasks available. Add some first!</p>
+        {% endif %}
+        <button class="focus-modal-close" onclick="closeFocusModal()">Cancel</button>
+    </div>
+</div>
+
+<!-- Retire Confirmation Modal -->
+<div class="focus-modal-overlay" id="retireConfirmModal" style="z-index: 2001;">
+    <div class="focus-modal" style="max-width: 360px; max-height: none;" onclick="event.stopPropagation()">
+        <div class="focus-modal-title" style="color: var(--danger);">⚠️ RETIRE QUEST?</div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-md); text-align: center; line-height: 1.6;">
+            <strong id="retireTaskNameDisplay" style="color: var(--text-main);"></strong><br>
+            This will void today's instance of this habit.<br>
+            <span style="color: var(--danger); font-size: 0.65rem;">This action cannot be undone.</span>
+        </p>
+        <div style="display: flex; gap: var(--space-sm);">
+            <button class="focus-modal-close" style="flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: var(--space-sm);" onclick="closeRetireConfirm()">Cancel</button>
+            <button class="task-retire-btn" style="flex: 1; padding: var(--space-sm);" id="retireConfirmBtn" onclick="confirmRetire()">RETIRE</button>
+        </div>
+    </div>
+</div>
+
+<!-- Focus Mode Full Screen -->
+<div class="focus-overlay" id="focusOverlay">
+    <button class="action-btn focus-exit-fixed" onclick="exitFocusMode()">✖ Exit</button>
+    
+    <div class="focus-header">
+        <div class="focus-title">🧠 FOCUS MODE</div>
+        <div class="focus-task-name" id="focusTaskName">Task Name</div>
+    </div>
+    
+    <div class="focus-timer" id="focusTimer">25:00</div>
+    
+    <div class="focus-actions">
+        <button class="focus-btn complete" onclick="completeFocusTask()">✓ Complete Task</button>
+    </div>
+</div>
+

@@ -1,0 +1,227 @@
+<!-- Header -->
+<div class="game-panel" style="margin-bottom: var(--space-sm);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+        <h1 style="margin: 0;">{{ today }}</h1>
+    </div>
+    
+    <div class="efficiency-panel">
+        <div class="efficiency-value">{{ efficiency }}%</div>
+        <div class="efficiency-label">Today's Efficiency</div>
+    </div>
+
+    <div class="flavor-text" id="dynamic-flavor" style="font-size: 0.75rem;">
+        {% if efficiency < 30 %}
+            The system waits. You don't.
+        {% elif efficiency < 60 %}
+            Progress is slow, but it's still progress.
+        {% elif efficiency < 100 %}
+            Momentum is a quiet kind of power.
+        {% else %}
+            You're dangerously competent today.
+        {% endif %}
+    </div>
+</div>
+
+<!-- Task Search -->
+<div class="task-search">
+    <input type="text" id="taskSearchInput" placeholder="🔍 Search tasks..." onkeyup="filterTasks()">
+</div>
+
+<!-- Today Tasks (PRIMARY) -->
+<div class="task-section game-panel today">
+    <div class="section-header" onclick="this.classList.toggle('collapsed')">
+        <div class="section-header-top">
+            <h2 class="section-title">🎯 TODAY'S QUESTS</h2>
+            <span class="section-hint collapsible-icon">▼</span>
+        </div>
+        <div class="section-header-collapsed">
+            {% set today_completed = today_tasks|selectattr('is_completed')|list|length %}
+            {% set today_total = today_tasks|length %}
+            {% set today_remaining = today_total - today_completed %}
+            <span class="section-summary">{{ today_completed }}/{{ today_total }} done</span>
+            <div class="progress-mini">
+                <div class="progress-mini-fill" style="width: {% if today_total > 0 %}{{ (today_completed / today_total * 100)|int }}{% else %}0{% endif %}%"></div>
+            </div>
+            <span class="section-status">{% if today_remaining == 0 %}All done. Well played.{% elif today_remaining == 1 %}1 left. Finish strong.{% elif today_remaining <= 3 %}{{ today_remaining }} remaining.{% else %}{{ today_remaining }} tasks waiting.{% endif %}</span>
+        </div>
+    </div>
+    
+    <div class="collapsible-content">
+    <div class="task-list" id="today-task-list">
+        {% for task in today_tasks %}
+        <div class="task-card task-card today {% if not task.is_completed %}clickable{% endif %} {% if task.is_completed %}completed{% endif %}" 
+             draggable="true"
+             data-task-id="{{ task.id }}"
+             onclick="if(!this.closest('.task-section').querySelector('.section-header').classList.contains('collapsed') && !this.classList.contains('dragging')) document.getElementById('today-form-{{ task.id }}').submit()">
+            <div class="task-checkbox {% if task.is_completed %}checked{% endif %}"></div>
+            <div class="task-info">
+                <div class="task-name">{{ task.name | e }}</div>
+                {% if task.priority and task.priority > 0 %}
+                <span class="task-badge {% if task.priority == 3 %}priority-high{% elif task.priority == 2 %}priority-medium{% else %}priority-low{% endif %}">
+                    {% if task.priority == 3 %}HIGH{% elif task.priority == 2 %}MED{% else %}LOW{% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <span class="task-xp">+10</span>
+            <form method="POST" action="{{ url_for('tasks.toggle', task_id=task.id) }}" id="today-form-{{ task.id }}" style="display:none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            </form>
+            <button type="button" class="task-expand-btn" onclick="event.stopPropagation(); toggleTaskDetails(this)">⋮</button>
+            <div class="task-details-dropdown">
+                <form method="POST" action="{{ url_for('tasks.update', task_id=task.id) }}" class="task-details-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <select name="category_id">
+                        <option value="">No category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if task.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="priority">
+                        <option value="0">Priority</option>
+                        <option value="1" {% if task.priority == 1 %}selected{% endif %}>Low</option>
+                        <option value="2" {% if task.priority == 2 %}selected{% endif %}>Med</option>
+                        <option value="3" {% if task.priority == 3 %}selected{% endif %}>High</option>
+                    </select>
+                    <textarea name="notes" placeholder="Add notes...">{{ task.notes or '' }}</textarea>
+                    <button type="submit" class="task-detail-save">Save</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not today_tasks %}
+    <div class="empty-state" style="padding: var(--space-sm);">
+        <span class="empty-state-icon" style="font-size: 1.25rem;">🎯</span>
+        <p class="empty-state-text" style="font-size: 0.7rem;">Add a quest below</p>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('tasks.add_task') }}" class="add-task-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="name" placeholder="New quest..." required>
+        <select name="category_id">
+            <option value="">No category</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">+</button>
+    </form>
+    </div>
+</div>
+
+<!-- Momentum Panel -->
+<div class="momentum-panel">
+    <div class="momentum-header">
+        <div class="momentum-title">MOMENTUM</div>
+        <div class="momentum-streak">{% if stats.current_streak > 0 %}🔥 {{ stats.current_streak }}d{% else %}No streak{% endif %}</div>
+    </div>
+    <div class="momentum-stats">
+        <div class="momentum-stat">
+            <div class="momentum-stat-value">{{ stats.current_streak }}</div>
+            <div class="momentum-stat-label">Streak</div>
+        </div>
+        <div class="momentum-stat">
+            <div class="momentum-stat-value">{{ stats.total_tasks }}</div>
+            <div class="momentum-stat-label">Tasks</div>
+        </div>
+        <div class="momentum-stat">
+            <div class="momentum-stat-value">{{ efficiency }}%</div>
+            <div class="momentum-stat-label">Today</div>
+        </div>
+    </div>
+</div>
+
+<!-- Everyday Tasks (SECONDARY) -->
+<div class="task-section game-panel everyday">
+    <div class="section-header" onclick="this.classList.toggle('collapsed')">
+        <div class="section-header-top">
+            <h2 class="section-title">⚔️ EVERYDAY QUESTS</h2>
+            <span class="section-hint collapsible-icon">▼</span>
+        </div>
+        <div class="section-header-collapsed">
+            {% set everyday_active = everyday_tasks|rejectattr('is_voided')|list|length %}
+            {% set everyday_completed = everyday_tasks|selectattr('is_completed')|list|length %}
+            {% set everyday_total = everyday_tasks|length %}
+            <span class="section-summary">{{ everyday_active }} habits • {{ everyday_completed }} done</span>
+            <div class="progress-mini">
+                <div class="progress-mini-fill everyday-fill" style="width: {% if everyday_total > 0 %}{{ (everyday_completed / everyday_total * 100)|int }}{% else %}0{% endif %}%"></div>
+            </div>
+            <span class="section-status">{% if everyday_completed == everyday_total and everyday_total > 0 %}All habits complete.{% elif everyday_completed == 0 and everyday_total > 0 %}Break the streak?{% else %}{{ everyday_total - everyday_completed }} left to go.{% endif %}</span>
+        </div>
+    </div>
+    
+    <div class="collapsible-content">
+    <div class="task-list" id="everyday-task-list">
+        {% for task in everyday_tasks %}
+        <div class="task-card task-card everyday {% if not task.is_completed and not task.is_voided %}clickable{% endif %} {% if task.is_voided %}ended{% elif task.is_completed %}completed{% endif %}" 
+             draggable="true"
+             data-task-id="{{ task.id }}"
+             onclick="if(!this.closest('.task-section').querySelector('.section-header').classList.contains('collapsed') && !this.classList.contains('dragging')) document.getElementById('everyday-form-{{ task.id }}').submit()">
+            <div class="task-checkbox {% if task.is_completed %}checked{% endif %}"></div>
+            <div class="task-info">
+                <div class="task-name">{{ task.name | e }}</div>
+            </div>
+            <span class="task-xp">+15</span>
+            <form method="POST" action="{{ url_for('tasks.toggle', task_id=task.id) }}" id="everyday-form-{{ task.id }}" style="display:none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            </form>
+            <button type="button" class="task-expand-btn" onclick="event.stopPropagation(); toggleTaskDetails(this)">⋮</button>
+            <div class="task-details-dropdown">
+                <form method="POST" action="{{ url_for('tasks.update', task_id=task.id) }}" class="task-details-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <select name="category_id">
+                        <option value="">No category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if task.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="priority">
+                        <option value="0">Priority</option>
+                        <option value="1" {% if task.priority == 1 %}selected{% endif %}>Low</option>
+                        <option value="2" {% if task.priority == 2 %}selected{% endif %}>Med</option>
+                        <option value="3" {% if task.priority == 3 %}selected{% endif %}>High</option>
+                    </select>
+                    <textarea name="notes" placeholder="Add notes...">{{ task.notes or '' }}</textarea>
+                    <button type="submit" class="task-detail-save">Save</button>
+                </form>
+                {% if not task.is_voided and task.everyday_def_id %}
+                <form method="POST" action="{{ url_for('tasks.toggle_everyday', task_id=task.everyday_def_id or task.id) }}" id="retire-form-{{ task.everyday_def_id or task.id }}" style="margin-top: 8px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="button" class="task-retire-btn" onclick="event.stopPropagation(); openRetireConfirm('{{ task.everyday_def_id or task.id }}', '{{ task.name | e }}')">RETIRE</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if not everyday_tasks %}
+    <div class="empty-state" style="padding: var(--space-sm);">
+        <span class="empty-state-icon" style="font-size: 1.25rem;">⚔️</span>
+        <p class="empty-state-text" style="font-size: 0.7rem;">Build your routine below</p>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('tasks.add_everyday') }}" class="add-task-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="name" placeholder="New everyday quest..." required>
+        <select name="category_id">
+            <option value="">No category</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="recurrence">
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="mwf">Mon/Wed/Fri</option>
+            <option value="tth">Tue/Thu</option>
+            <option value="weekly">Weekly</option>
+        </select>
+        <button type="submit">+</button>
+    </form>
+    </div>
+</div>
+
