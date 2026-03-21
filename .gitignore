@@ -8,6 +8,8 @@ instance/
 *.zip
 nul
 cursor/
+!static/cursor/
+!static/cursor/**
 *.log
 .DS_Store
 *.spec
