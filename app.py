@@ -69,6 +69,11 @@ login_manager.session_protection = "strong"
 limiter.init_app(app)
 
 
+@app.route("/healthz")
+def healthz():
+    return "ok", 200
+
+
 @login_manager.user_loader
 def load_user(user_id):
     from models.user import User
