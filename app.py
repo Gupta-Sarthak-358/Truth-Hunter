@@ -69,6 +69,7 @@ login_manager.session_protection = "strong"
 limiter.init_app(app)
 
 
+@limiter.exempt
 @app.route("/healthz")
 def healthz():
     return "ok", 200
