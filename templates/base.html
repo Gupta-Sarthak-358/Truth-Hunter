@@ -8,22 +8,34 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         (function() {
-            var theme = localStorage.getItem("theme") || "azure";
-            document.documentElement.setAttribute("data-theme", theme);
-            
-            var animations = localStorage.getItem("pref_animations");
-            if (animations === 'false') {
-                document.documentElement.setAttribute("data-reduce-motion", "1");
+            // Never keep the page hidden if storage is unavailable (e.g. iOS Safari private mode).
+            try {
+                var theme = "azure";
+                try {
+                    theme = localStorage.getItem("theme") || "azure";
+                } catch (e) {}
+                document.documentElement.setAttribute("data-theme", theme);
+
+                try {
+                    var animations = localStorage.getItem("pref_animations");
+                    if (animations === 'false') {
+                        document.documentElement.setAttribute("data-reduce-motion", "1");
+                    }
+                } catch (e) {}
+
+                // Preload cursor images
+                [
+                    '/static/cursor/azure-normal.png',
+                    '/static/cursor/azure-click.png',
+                    '/static/cursor/blossom-normal.png',
+                    '/static/cursor/blossom-click.png'
+                ].forEach(function(src) {
+                    var img = new Image();
+                    img.src = src;
+                });
+            } finally {
+                document.documentElement.style.visibility = "visible";
             }
-            
-            document.documentElement.style.visibility = "visible";
-            
-            // Preload cursor images
-            ['/static/cursor/azure-normal.png', '/static/cursor/azure-click.png',
-             '/static/cursor/blossom-normal.png', '/static/cursor/blossom-click.png'].forEach(function(src) {
-                var img = new Image();
-                img.src = src;
-            });
         })();
     </script>
 </head>
