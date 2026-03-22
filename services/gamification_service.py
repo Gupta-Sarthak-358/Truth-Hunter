@@ -130,8 +130,11 @@ def prewarm_user_cache_async(user_id):
 def refresh_user_cache_async(user_id):
     from utils import invalidate_user_cache
 
+    # Invalidate synchronously to avoid a race where the UI reloads and reads stale cache
+    # before the background thread gets scheduled.
+    invalidate_user_cache(user_id)
+
     def _refresh():
-        invalidate_user_cache(user_id)
         _prewarm_user_cache(user_id)
 
     worker = threading.Thread(
