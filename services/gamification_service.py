@@ -34,6 +34,9 @@ SHARED_MONSTER_TYPES_TTL = 60
 # Note: this doesn't coordinate across multiple web instances. That's acceptable for now.
 _daily_sync_inflight = set()
 _daily_sync_lock = threading.Lock()
+_prewarm_inflight = set()
+_prewarm_pending = set()
+_prewarm_lock = threading.Lock()
 
 
 def _prewarm_user_cache_phase1(user_id):
@@ -118,9 +121,29 @@ def _prewarm_user_cache(user_id):
 
 
 def prewarm_user_cache_async(user_id):
+    with _prewarm_lock:
+        if user_id in _prewarm_inflight:
+            _prewarm_pending.add(user_id)
+            return
+        _prewarm_inflight.add(user_id)
+
+    def _worker():
+        try:
+            while True:
+                _prewarm_user_cache(user_id)
+                with _prewarm_lock:
+                    if user_id not in _prewarm_pending:
+                        _prewarm_inflight.discard(user_id)
+                        break
+                    _prewarm_pending.discard(user_id)
+        except Exception:
+            with _prewarm_lock:
+                _prewarm_inflight.discard(user_id)
+                _prewarm_pending.discard(user_id)
+            logger.exception("User cache prewarm async failed", extra={"user_id": user_id})
+
     worker = threading.Thread(
-        target=_prewarm_user_cache,
-        args=(user_id,),
+        target=_worker,
         daemon=True,
         name=f"cache-prewarm-{user_id}",
     )
@@ -133,16 +156,7 @@ def refresh_user_cache_async(user_id):
     # Invalidate synchronously to avoid a race where the UI reloads and reads stale cache
     # before the background thread gets scheduled.
     invalidate_user_cache(user_id)
-
-    def _refresh():
-        _prewarm_user_cache(user_id)
-
-    worker = threading.Thread(
-        target=_refresh,
-        daemon=True,
-        name=f"cache-refresh-{user_id}",
-    )
-    worker.start()
+    prewarm_user_cache_async(user_id)
 
 
 def check_and_award_all(user_id):

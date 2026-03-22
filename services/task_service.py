@@ -17,42 +17,66 @@ import time
 
 logger = logging.getLogger(__name__)
 
+_deferred_lock = threading.Lock()
+_deferred_inflight = set()
+_deferred_pending = {}
+
 
 def _run_deferred_post_completion(user_id, monster_id):
     """Run non-critical completion updates after the response path."""
     try:
         from services.gamification_service import check_and_award_all, refresh_user_cache_async
 
-        step_start = time.time()
-        check_and_update_perfect_day(user_id)
-        logger.info(
-            "Task completion step complete",
-            extra={
-                "metric": "task_complete_perfect_day_deferred",
-                "user_id": user_id,
-                "duration_ms": int((time.time() - step_start) * 1000),
-            },
-        )
+        needs_type_refresh = bool(monster_id)
 
-        if monster_id:
-            step_start = time.time()
-            update_type_complete_count(user_id)
-            logger.info(
-                "Task completion step complete",
-                extra={
-                    "metric": "task_complete_update_type_count_deferred",
-                    "user_id": user_id,
-                    "duration_ms": int((time.time() - step_start) * 1000),
-                },
-            )
+        while True:
+            try:
+                step_start = time.time()
+                check_and_update_perfect_day(user_id)
+                logger.info(
+                    "Task completion step complete",
+                    extra={
+                        "metric": "task_complete_perfect_day_deferred",
+                        "user_id": user_id,
+                        "duration_ms": int((time.time() - step_start) * 1000),
+                    },
+                )
 
-        check_and_award_all(user_id)
-        refresh_user_cache_async(user_id)
+                if needs_type_refresh:
+                    step_start = time.time()
+                    update_type_complete_count(user_id)
+                    logger.info(
+                        "Task completion step complete",
+                        extra={
+                            "metric": "task_complete_update_type_count_deferred",
+                            "user_id": user_id,
+                            "duration_ms": int((time.time() - step_start) * 1000),
+                        },
+                    )
+
+                check_and_award_all(user_id)
+                refresh_user_cache_async(user_id)
+            except Exception:
+                logger.exception("Deferred task completion post-processing failed")
+
+            with _deferred_lock:
+                pending = _deferred_pending.pop(user_id, None)
+                if not pending:
+                    _deferred_inflight.discard(user_id)
+                    break
+                needs_type_refresh = pending.get("needs_type_refresh", False)
     except Exception:
-        logger.exception("Deferred task completion post-processing failed")
+        logger.exception("Deferred task completion worker failed")
 
 
 def _spawn_deferred_post_completion(user_id, monster_id):
+    with _deferred_lock:
+        if user_id in _deferred_inflight:
+            state = _deferred_pending.setdefault(user_id, {"needs_type_refresh": False})
+            state["needs_type_refresh"] = state["needs_type_refresh"] or bool(monster_id)
+            return
+        _deferred_inflight.add(user_id)
+
     worker = threading.Thread(
         target=_run_deferred_post_completion,
         args=(user_id, monster_id),
